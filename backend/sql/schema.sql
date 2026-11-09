@@ -82,3 +82,4 @@ CREATE TABLE IF NOT EXISTS access_codes (
 INSERT INTO access_codes (code, description, max_uses, times_used, is_active)
 VALUES ('LEVELEDUPVIP2026', 'Kode Promo Peluncuran Mobile MVP', 1000, 0, TRUE)
 ON DUPLICATE KEY UPDATE code=code;
+

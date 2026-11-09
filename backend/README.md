@@ -212,3 +212,4 @@ Jika Anda memiliki API Key dari Google AI Studio:
    GEMINI_API_KEY=AIzaSy...
    ```
 3. Jika dibiarkan kosong, backend akan secara otomatis beralih ke **Rule-Based Heuristic ATS Engine** tanpa error sedikitpun.
+

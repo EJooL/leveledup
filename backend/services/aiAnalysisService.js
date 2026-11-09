@@ -102,3 +102,4 @@ async function analyzeCv(text, fileName = 'CV.pdf') {
 module.exports = {
   analyzeCv,
 };
+

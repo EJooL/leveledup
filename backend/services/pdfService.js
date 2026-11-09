@@ -46,3 +46,4 @@ async function parsePdfBuffer(buffer, fileName = 'resume.pdf') {
 module.exports = {
   parsePdfBuffer,
 };
+

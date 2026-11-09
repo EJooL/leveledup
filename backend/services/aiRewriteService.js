@@ -168,3 +168,4 @@ module.exports = {
   rewriteCv,
   generateFallbackRewrite,
 };
+
