@@ -30,6 +30,7 @@ router.post('/', async (req, res, next) => {
     // Prepare encrypted token sealing the locked premium details
     const sealedPayload = {
       scanToken,
+      language: fullResult.language || 'en',
       issues: fullResult.issues,
       missingKeywords: fullResult.keywordMatch ? fullResult.keywordMatch.missing : [],
       overallScore: fullResult.overallScore,
@@ -115,6 +116,7 @@ router.post('/', async (req, res, next) => {
 
     const freeTierResult = {
       mode: fullResult.mode || 'global',
+      language: fullResult.language || 'en',
       overallScore: fullResult.overallScore,
       summary: fullResult.summary,
       issues: freeTierIssues,
@@ -125,6 +127,7 @@ router.post('/', async (req, res, next) => {
       } : null,
       meta: {
         fileName: cleanFileName,
+        language: fullResult.language || 'en',
         analyzedAtLabel: fullResult.meta ? fullResult.meta.analyzedAtLabel : 'Dianalisis Sistem',
         engine: fullResult.meta ? fullResult.meta.engine : 'rule-based',
       },

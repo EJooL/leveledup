@@ -122,20 +122,23 @@ class CvScanNotifier extends StateNotifier<CvScanState> {
     }
   }
 
-  /// 1-Tap Instant Demo Scan using sample Indonesian CV
-  Future<void> runSampleDemoScan() async {
-    const demoFile = 'Resume_Budi_Santoso.pdf';
+  /// 1-Tap Instant Demo Scan (Supports both 'id' Bahasa Indonesia and 'en' English sample CVs)
+  Future<void> runSampleDemoScan({String language = 'id'}) async {
+    final isId = language == 'id';
+    final demoFile = isId ? 'CV_Budi_Santoso_ID.pdf' : 'Resume_Budi_Santoso_EN.pdf';
+    final sampleText = isId ? ApiConstants.sampleCvTextId : ApiConstants.sampleCvTextEn;
+
     state = state.copyWith(
       step: ScanStep.analyzingAts,
       fileName: demoFile,
-      extractedText: ApiConstants.sampleCvText,
+      extractedText: sampleText,
       clearError: true,
     );
 
     try {
       await Future.delayed(const Duration(milliseconds: 900));
       final analyzed = await _apiClient.analyzeCvText(
-        text: ApiConstants.sampleCvText,
+        text: sampleText,
         fileName: demoFile,
       );
 

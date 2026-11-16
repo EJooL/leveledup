@@ -56,7 +56,7 @@ class Issue {
       case 'achievements':
         return 'Quantified Impact';
       case 'language_quality':
-        return 'English Quality';
+        return 'Language Quality';
       default:
         return category;
     }
@@ -124,6 +124,7 @@ class KeywordMatch {
 
 class AnalysisResult {
   final String mode;
+  final String language;
   final int overallScore;
   final String summary;
   final List<Issue> issues;
@@ -134,6 +135,7 @@ class AnalysisResult {
 
   AnalysisResult({
     required this.mode,
+    this.language = 'en',
     required this.overallScore,
     required this.summary,
     required this.issues,
@@ -143,6 +145,8 @@ class AnalysisResult {
     this.isUnlocked = false,
   });
 
+  bool get isIndonesian => language == 'id';
+
   factory AnalysisResult.fromJson(Map<String, dynamic> json, {bool unlocked = false}) {
     final meta = json['meta'] as Map<String, dynamic>? ?? {};
     final parsedIssues = (json['issues'] as List<dynamic>? ?? [])
@@ -150,9 +154,11 @@ class AnalysisResult {
         .toList();
 
     final hasUnlockedDetails = unlocked || parsedIssues.any((i) => !i.isLocked);
+    final lang = json['language']?.toString() ?? meta['language']?.toString() ?? 'en';
 
     return AnalysisResult(
       mode: json['mode']?.toString() ?? 'global',
+      language: lang,
       overallScore: (json['overallScore'] is num) ? (json['overallScore'] as num).toInt() : 0,
       summary: json['summary']?.toString() ?? '',
       issues: parsedIssues,
@@ -187,6 +193,7 @@ class ImprovedCvSection {
 }
 
 class ImprovedCV {
+  final String language;
   final String name;
   final String title;
   final List<String> contact;
@@ -195,6 +202,7 @@ class ImprovedCV {
   final List<String> changes;
 
   ImprovedCV({
+    this.language = 'en',
     required this.name,
     required this.title,
     required this.contact,
@@ -203,8 +211,11 @@ class ImprovedCV {
     required this.changes,
   });
 
+  bool get isIndonesian => language == 'id';
+
   factory ImprovedCV.fromJson(Map<String, dynamic> json) {
     return ImprovedCV(
+      language: json['language']?.toString() ?? 'en',
       name: json['name']?.toString() ?? '',
       title: json['title']?.toString() ?? '',
       contact: List<String>.from(json['contact'] ?? []),
@@ -221,7 +232,7 @@ class ImprovedCV {
     buffer.writeln('# $name');
     buffer.writeln('**$title**');
     buffer.writeln(contact.join(' • '));
-    buffer.writeln('\n## Executive Summary');
+    buffer.writeln(isIndonesian ? '\n## Ringkasan Profesional' : '\n## Executive Summary');
     buffer.writeln(summary);
     for (final section in sections) {
       buffer.writeln('\n## ${section.heading}');
@@ -232,4 +243,3 @@ class ImprovedCV {
     return buffer.toString();
   }
 }
-

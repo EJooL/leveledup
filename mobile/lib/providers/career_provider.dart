@@ -273,6 +273,24 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
     state = state.copyWith(currentStage: stage, badges: updatedBadges);
   }
 
+  /// Update player name, target role, and initial stage upon Login / Registration
+  void updateProfileIdentity({
+    String? name,
+    String? targetRole,
+    CareerStage? stage,
+  }) {
+    var updatedBadges = state.badges;
+    if (stage != null && stage != CareerStage.jobHunting) {
+      updatedBadges = _unlockBadgeList(updatedBadges, 'b_first_job');
+    }
+    state = state.copyWith(
+      characterName: name ?? state.characterName,
+      targetRole: targetRole ?? state.targetRole,
+      currentStage: stage ?? state.currentStage,
+      badges: updatedBadges,
+    );
+  }
+
   /// Log a sent global job application (+25 XP)
   void logJobApplicationSent() {
     final newCount = state.applicationsSent + 1;

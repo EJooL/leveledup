@@ -1,6 +1,7 @@
 /**
  * Rule-Based ATS Analysis Engine for LeveledUp Mobile
- * Implements 5 International ATS Pillars conforming to mvp.md:
+ * Automatically detects CV language ('en' vs 'id') and returns evaluation in the matching language.
+ * Implements 5 International ATS Pillars:
  * 1. personal_info
  * 2. ats_readability
  * 3. keyword_match
@@ -40,6 +41,39 @@ const ROLE_KEYWORDS = {
 };
 
 /**
+ * Detect whether CV text is primarily in Bahasa Indonesia ('id') or English ('en')
+ * @param {string} text
+ * @returns {'id' | 'en'}
+ */
+function detectCvLanguage(text) {
+  const lower = (text || '').toLowerCase();
+  const idPatterns = [
+    /\bpengalaman\s+kerja\b/, /\bpendidikan\b/, /\bkeahlian\b/, /\bkemampuan\b/,
+    /\bringkasan\b/, /\btentang\s+saya\b/, /\bbertanggung\s+jawab\b/, /\btempat\b/,
+    /\btanggal\s+lahir\b/, /\bagama\b/, /\bstatus\s+pernikahan\b/, /\bbekerja\b/,
+    /\bperusahaan\b/, /\bmengelola\b/, /\bmembantu\b/, /\blulusan\b/, /\bsekarang\b/,
+    /\bpekerja\s+keras\b/, /\bdibawah\s+tekanan\b/, /\bdi\s+bawah\s+tekanan\b/,
+  ];
+  const enPatterns = [
+    /\bexperience\b/, /\beducation\b/, /\bskills\b/, /\bsummary\b/,
+    /\bresponsible\s+for\b/, /\buniversity\b/, /\bbachelor\b/, /\bpresent\b/,
+    /\bengineered\b/, /\bdeveloped\b/, /\bmanaged\b/, /\bdesigned\b/,
+    /\bcollaborated\b/, /\bprojects\b/, /\bcertifications\b/, /\bachievements\b/,
+  ];
+
+  let idScore = 0;
+  let enScore = 0;
+  for (const rx of idPatterns) {
+    if (rx.test(lower)) idScore++;
+  }
+  for (const rx of enPatterns) {
+    if (rx.test(lower)) enScore++;
+  }
+
+  return idScore > enScore ? 'id' : 'en';
+}
+
+/**
  * Infer job role based on keywords present in the CV text
  */
 function inferJobRole(text) {
@@ -49,7 +83,6 @@ function inferJobRole(text) {
 
   for (const [role, keywords] of Object.entries(ROLE_KEYWORDS)) {
     let score = 0;
-    // Check if role name itself is mentioned
     if (lower.includes(role.toLowerCase())) score += 5;
     for (const kw of keywords) {
       if (lower.includes(kw.toLowerCase())) score += 1;
@@ -90,263 +123,210 @@ function analyzeKeywords(text, role) {
 }
 
 /**
- * Main Rule-Based Evaluation
+ * Main Rule-Based Evaluation (Bilingual: 'id' or 'en')
  * @param {string} text - Raw CV text
  * @param {string} fileName - File name
- * @returns {object} Full analysis result conforming to mvp.md
+ * @returns {object} Full analysis result
  */
 function analyzeWithRules(text, fileName = 'CV.pdf') {
+  const lang = detectCvLanguage(text);
+  const isId = lang === 'id';
   const issues = [];
-  const lower = text.toLowerCase();
 
-  // ----------------------------------------------------
-  // 1. Personal Info Bias Checks (Indonesian CV Habitudes)
-  // ----------------------------------------------------
-  
-  // Photo indicator
+  // 1. Personal Info Bias Checks
   if (/foto|photo|pasfoto|pas foto|image|picture|headshot/i.test(text) || /\b(fotocopy|foto\s*diri)\b/i.test(text)) {
     issues.push({
       id: 'photo',
       category: 'personal_info',
       severity: 'critical',
-      title: 'CV menyertakan foto diri atau penanda foto',
-      detail: 'Di pasar kerja global (AS, Inggris, Kanada, dll.), HR dilarang menerima CV yang memuat foto demi mematuhi undang-undang ketenagakerjaan non-diskriminasi (EEOC). CV dengan foto berisiko langsung disingkirkan tanpa ditinjau.',
-      fix: 'Hapus pas foto dan fokuskan layout CV murni pada konten teks profesional dan riwayat kerja.',
+      title: isId ? 'CV menyertakan foto diri atau penanda foto' : 'CV includes a headshot photo or photo indicator',
+      detail: isId
+        ? 'Standar ATS modern memprioritaskan kualifikasi objektif. Menyertakan foto dapat memicu bias rekrutmen dan merusak tata letak parser teks.'
+        : 'In international ATS standards (US, UK, EU), resumes with photos risk automatic rejection due to anti-discrimination (EEOC) compliance rules.',
+      fix: isId
+        ? 'Hapus pas foto dan fokuskan bagian atas CV pada nama lengkap, kontak profesional, serta tautan LinkedIn/GitHub.'
+        : 'Remove the headshot photo and dedicate your header strictly to your name, contact info, and LinkedIn/GitHub links.',
       rewrite: {
-        before: '[Pas Foto 4x6 di sudut kanan atas]',
-        after: '[Hanya teks nama lengkap, kontak profesional, dan tautan LinkedIn/GitHub]',
+        before: isId ? '[Pas Foto 4x6 di sudut atas]' : '[Headshot Photo in Top Header]',
+        after: isId ? '[Hanya teks nama lengkap, email, telepon, dan tautan portofolio]' : '[Clean text header: Name • Email • Phone • LinkedIn • GitHub]',
       },
     });
   }
 
-  // Date of Birth / Place of Birth / Age
   if (/tanggal lahir|tempat lahir|date of birth|birth date|tgl lahir|t\.t\.l|ttl\b|usia\s*:\s*\d+|umur\s*:\s*\d+|\bage\s*:\s*\d+/i.test(text)) {
     issues.push({
       id: 'dob_age',
       category: 'personal_info',
       severity: 'critical',
-      title: 'Tercantum tanggal lahir, tempat lahir, atau umur',
-      detail: 'Menyertakan usia atau tanggal lahir memicu bias usia (ageism). Rekruter internasional tidak boleh menilai kandidat berdasarkan usia, melainkan kualifikasi kompetensi.',
-      fix: 'Hapus bagian Tempat/Tanggal Lahir (TTL) dan Umur dari informasi profil.',
+      title: isId ? 'Tercantum tanggal lahir, tempat lahir, atau umur' : 'Contains Date of Birth, Place of Birth, or Age',
+      detail: isId
+        ? 'Menyertakan usia atau tempat/tanggal lahir (TTL) tidak relevan dengan kompetensi teknis dan berisiko memicu bias usia (ageism).'
+        : 'Including your age or date of birth exposes you to age bias and violates international equal-opportunity resume guidelines.',
+      fix: isId
+        ? 'Hapus bagian Tempat/Tanggal Lahir (TTL) dan Usia dari header profil.'
+        : 'Remove Date of Birth and Age from your personal details.',
       rewrite: {
-        before: 'Jakarta, 14 Mei 2001 (Usia: 24 Tahun)',
-        after: 'Lokasi: Jakarta, Indonesia (Open to Remote / Relocation)',
+        before: isId ? 'Jakarta, 14 Mei 2001 (Usia: 24 Tahun)' : 'DOB: May 14, 2001 (Age: 24)',
+        after: isId ? 'Domisili: Jakarta, Indonesia' : 'Location: Jakarta, Indonesia (Open to Remote)',
       },
     });
   }
 
-  // Marital Status
   if (/status pernikahan|marital status|status perkawinan|status\s*:\s*(lajang|menikah|single|married|belum menikah)/i.test(text)) {
     issues.push({
       id: 'marital_status',
       category: 'personal_info',
       severity: 'critical',
-      title: 'Menyertakan status pernikahan/perkawinan',
-      detail: 'Status perkawinan adalah informasi privasi sensitif yang dilindungi hukum ketenagakerjaan internasional. Hal ini tidak memiliki korelasi dengan kompetensi teknis pekerjaan Anda.',
-      fix: 'Hapus baris Status Pernikahan/Perkawinan sepenuhnya dari CV.',
+      title: isId ? 'Menyertakan status pernikahan/perkawinan' : 'Includes marital status information',
+      detail: isId
+        ? 'Status pernikahan adalah informasi privasi yang tidak memiliki korelasi dengan performa kerja Anda.'
+        : 'Marital status is protected personal information and has no bearing on job qualification.',
+      fix: isId
+        ? 'Hapus baris Status Pernikahan sepenuhnya dari CV.'
+        : 'Delete the Marital Status line completely from your resume.',
       rewrite: {
-        before: 'Status: Belum Menikah / Single',
-        after: '[Dihapus sepenuhnya dari header kontak]',
+        before: isId ? 'Status: Belum Menikah' : 'Marital Status: Single',
+        after: isId ? '[Dihapus sepenuhnya dari header kontak]' : '[Removed completely from header]',
       },
     });
   }
 
-  // Religion
   if (/agama\s*:|religion\s*:|islam|kristen|katolik|hindu|buddha|khonghucu/i.test(text)) {
     issues.push({
       id: 'religion',
       category: 'personal_info',
       severity: 'critical',
-      title: 'Menyertakan informasi agama atau keyakinan',
-      detail: 'Mencantumkan agama dapat memunculkan kecurigaan bias keyakinan pada rekruter global. Perusahaan multinasional menerapkan standar ketat kesetaraan hak (Equal Opportunity Employer).',
-      fix: 'Hapus baris Agama dari CV Anda.',
+      title: isId ? 'Menyertakan informasi agama atau keyakinan' : 'Includes religious affiliation',
+      detail: isId
+        ? 'Mencantumkan agama pada CV profesional berisiko menimbulkan bias subjektif pada tahap seleksi.'
+        : 'Listing religious affiliation violates global anti-bias hiring practices.',
+      fix: isId ? 'Hapus baris Agama dari CV Anda.' : 'Remove religion from your resume header.',
       rewrite: {
-        before: 'Agama: Islam',
-        after: '[Dihapus sepenuhnya]',
+        before: isId ? 'Agama: Islam' : 'Religion: Islam',
+        after: isId ? '[Dihapus sepenuhnya]' : '[Removed completely]',
       },
     });
   }
 
-  // Gender / Sex
-  if (/jenis kelamin|gender\s*:|sex\s*:\s*(male|female|pria|wanita|laki-laki|perempuan)/i.test(text)) {
-    issues.push({
-      id: 'gender',
-      category: 'personal_info',
-      severity: 'warning',
-      title: 'Tercantum jenis kelamin (gender)',
-      detail: 'Di pasar kerja Barat, jenis kelamin tidak boleh menjadi pertimbangan rekrutmen. Menyertakannya terkesan kuno bagi standar ATS modern.',
-      fix: 'Hapus keterangan jenis kelamin.',
-      rewrite: {
-        before: 'Jenis Kelamin: Laki-laki / Male',
-        after: '[Dihapus sepenuhnya]',
-      },
-    });
-  }
-
-  // NIK / National Identity / KTP
   if (/\b(nik|ktp|no\.?\s*ktp|national id|nomor induk kependudukan)\b/i.test(text)) {
     issues.push({
       id: 'national_id',
       category: 'personal_info',
       severity: 'critical',
-      title: 'Terdapat nomor identitas kependudukan (NIK/KTP)',
-      detail: 'NIK/KTP adalah data pribadi yang sangat rahasia (PII). Mempublikasikannya di CV berisiko pencurian identitas dan melanggar praktik keamanan data internasional.',
-      fix: 'Hapus NIK atau nomor identitas nasional apapun dari dokumen lamaran kerja.',
+      title: isId ? 'Terdapat nomor identitas kependudukan (NIK/KTP)' : 'Exposes National ID number (NIK/KTP)',
+      detail: isId
+        ? 'NIK/KTP adalah data privasi sensitif (PII). Mencantumkannya di CV berisiko penyalahgunaan data pribadi.'
+        : 'National ID numbers are sensitive Personally Identifiable Information (PII) and should never appear on a resume.',
+      fix: isId ? 'Hapus NIK atau nomor KTP dari dokumen CV.' : 'Remove any National ID or passport number from your CV.',
       rewrite: {
         before: 'NIK: 317405XXXXXXXXXX',
-        after: '[Dihapus sepenuhnya demi keamanan data pribadi]',
+        after: isId ? '[Dihapus demi keamanan data pribadi]' : '[Removed for PII data security]',
       },
     });
   }
 
-  // Physical attributes (Blood type, height, weight)
-  if (/golongan darah|gol\.?\s*darah|tinggi badan|berat badan|blood type|height\s*:|weight\s*:/i.test(text)) {
-    issues.push({
-      id: 'physical_attributes',
-      category: 'personal_info',
-      severity: 'warning',
-      title: 'Mencantumkan data fisik (tinggi, berat badan, atau golongan darah)',
-      detail: 'Karakteristik fisik tidak relevan untuk sebagian besar pekerjaan profesional internasional dan dapat memicu bias penampilan.',
-      fix: 'Hapus data tinggi badan, berat badan, dan golongan darah.',
-      rewrite: {
-        before: 'Tinggi: 175 cm | Berat: 68 kg | Gol. Darah: O',
-        after: '[Dihapus sepenuhnya]',
-      },
-    });
-  }
-
-  // Hobbies / Interests (often filler)
-  if (/\b(hobi|hobby|hobbies|kegemaran)\b/i.test(text) && !/technical projects|open source/i.test(text)) {
-    issues.push({
-      id: 'hobbies',
-      category: 'personal_info',
-      severity: 'suggestion',
-      title: 'Menyertakan bagian hobi non-profesional',
-      detail: 'Hobi umum seperti membaca, menonton film, atau traveling membuang ruang berharga pada resume satu halaman (one-page resume).',
-      fix: 'Ganti bagian hobi dengan proyek portofolio, kontribusi open source, atau sertifikasi yang relevan.',
-      rewrite: {
-        before: 'Hobi: Membaca buku teknologi dan fotografi',
-        after: 'Projects: Kontributor open-source pada repository Flutter & Express dengan 200+ stars.',
-      },
-    });
-  }
-
-  // ----------------------------------------------------
-  // 2. ATS Readability & Structure Checks
-  // ----------------------------------------------------
-  
-  // Table or complex layout indicators
-  if (/\|\s*---|\+\-\-\-\+/i.test(text) || (/tabel|table/i.test(text) && /kolom|column/i.test(text))) {
-    issues.push({
-      id: 'table_layout',
-      category: 'ats_readability',
-      severity: 'critical',
-      title: 'Terdeteksi struktur tabel atau multi-kolom yang kompleks',
-      detail: 'Sistem ATS membaca dokumen dari kiri ke kanan secara linear. Tabel dan tata letak multi-kolom dapat memecah baris teks sehingga pengalaman kerja dan tanggal bercampur aduk.',
-      fix: 'Gunakan tata letak satu kolom (single-column layout) berbasis heading teks standar yang bersih.',
-      rewrite: {
-        before: '| Perusahaan | Posisi | Tahun |\n| PT ABC | Dev | 2023 |',
-        after: 'Software Engineer — PT ABC (Jan 2023 – Sekarang)',
-      },
-    });
-  }
-
-  // Length check: CV should ideally be concise
+  // 2. ATS Readability Checks
   const wordCount = text.split(/\s+/).filter(Boolean).length;
   if (wordCount < 150) {
     issues.push({
       id: 'too_short',
       category: 'ats_readability',
       severity: 'warning',
-      title: 'Konten CV terlalu singkat atau kurang rincian deskripsi',
-      detail: 'CV dengan kata yang terlalu sedikit (< 150 kata) mengindikasikan ketiadaan rincian proyek dan tanggung jawab penting.',
-      fix: 'Tambahkan poin-poin penjelasan pengalaman kerja yang menjelaskan teknologi dan pencapaian Anda.',
+      title: isId ? 'Konten CV terlalu singkat (< 150 kata)' : 'Resume content is too brief (< 150 words)',
+      detail: isId
+        ? 'CV yang terlalu pendek kurang memberikan konteks mengenai proyek, teknologi, dan dampak kerja Anda.'
+        : 'A resume under 150 words lacks sufficient project context and technical depth for ATS ranking.',
+      fix: isId
+        ? 'Tambahkan 3–4 poin pencapaian terukur pada setiap pengalaman kerja.'
+        : 'Expand each work experience entry with 3–4 quantified STAR bullet points.',
       rewrite: {
-        before: 'Magang IT di PT XYZ (2023)',
-        after: 'IT Software Intern — PT XYZ (Jun – Agu 2023)\n• Mengembangkan modul autentikasi backend...',
+        before: isId ? 'Software Engineer di PT XYZ (2023)' : 'Software Engineer at XYZ Corp (2023)',
+        after: isId
+          ? 'Software Engineer — PT XYZ (2023)\n• Mengembangkan layanan API dengan Node.js yang melayani [jumlah] transaksi harian.'
+          : 'Software Engineer — XYZ Corp (2023)\n• Engineered Node.js REST APIs serving [number]+ daily requests with [X]% uptime.',
       },
     });
   }
 
-  // ----------------------------------------------------
-  // 3. Achievements & Action Verbs Checks (STAR Method)
-  // ----------------------------------------------------
-  
-  // Passive responsibility phrases (Daftar Tugas vs Pencapaian)
-  const passivePhrasesRegex = /\b(bertanggung jawab|responsible for|tugas saya|mengelola tugas|duty includes|duties were|melakukan pekerjaan)\b/i;
+  // 3. Achievements Checks (STAR Method)
+  const passivePhrasesRegex = /\b(bertanggung jawab|responsible for|tugas saya|mengelola tugas|duty includes|duties were|melakukan pekerjaan|assisted in|worked on)\b/i;
   if (passivePhrasesRegex.test(text)) {
     issues.push({
       id: 'duties',
       category: 'achievements',
       severity: 'warning',
-      title: 'Poin pengalaman kerja masih bergaya daftar tugas pasif',
-      detail: 'Standar resume global mengharuskan penulisan berbasis dampak dan pencapaian menggunakan kata kerja aksi (Action Verb + Context + Quantifiable Result), bukan sekadar daftar tugas pasif ("Responsible for").',
-      fix: 'Tulis ulang poin pengalaman menggunakan pola STAR: mulai dengan kata kerja aktif kuat dan sertakan dampak hasil kerja.',
+      title: isId
+        ? 'Poin pengalaman masih bergaya daftar tugas pasif, belum pencapaian terukur'
+        : 'Experience bullets read like passive duties instead of quantified achievements',
+      detail: isId
+        ? 'Kalimat seperti "Bertanggung jawab..." hanya menjelaskan deskripsi jabatan, bukan dampak keberhasilan Anda.'
+        : 'Phrases like "Responsible for..." describe job expectations rather than your measurable impact (STAR method).',
+      fix: isId
+        ? 'Gunakan kata kerja aktif di awal kalimat (Mengoptimalkan, Merancang, Memimpin) diikuti hasil terukur.'
+        : 'Start bullets with strong action verbs (Architected, Optimized, Spearheaded) followed by quantified metrics.',
       rewrite: {
-        before: 'Bertanggung jawab mengelola dan memelihara sistem database perusahaan.',
-        after: 'Mengoptimalkan performa query database MySQL, memangkas waktu respon sebesar [X]% untuk [jumlah] pengguna aktif.',
+        before: isId
+          ? 'Bertanggung jawab mengelola dan memelihara sistem database perusahaan.'
+          : 'Responsible for managing and maintaining the company MySQL database.',
+        after: isId
+          ? 'Mengoptimalkan indeks query database MySQL, memangkas waktu respons API sebesar [X]% untuk [jumlah] pengguna aktif.'
+          : 'Optimized MySQL query indexing, cutting API response latency by [X]% across [number]+ active users.',
       },
     });
   }
 
-  // Lack of metrics / numbers
-  const hasNumbers = /\b\d+(\.\d+)?%|\b\d+\+\s*(users|clients|proyek|projects|jt|juta|k|m)\b|\b(meningkatkan|memangkas|reduced|increased|improved)\s+sebesar\b/i.test(text);
+  const hasNumbers = /\b\d+(\.\d+)?%|\b\d+\+\s*(users|clients|proyek|projects|pengguna|klien)\b/i.test(text);
   if (!hasNumbers) {
     issues.push({
       id: 'no_metrics',
       category: 'achievements',
       severity: 'warning',
-      title: 'Ketiadaan metrik dan pencapaian terukur (quantified results)',
-      detail: 'Tanpa angka persentase, penghematan waktu, atau skala pengguna, rekruter tidak dapat mengukur seberapa signifikan kontribusi nyata Anda.',
-      fix: 'Sertakan metrik terukur pada setidaknya 2–3 poin pengalaman kerja utama (misal: persentase efisiensi, volume data, atau jumlah pengguna).',
+      title: isId
+        ? 'Minim metrik angka dan hasil terukur (quantified impact)'
+        : 'Lacks quantifiable metrics and measurable outcomes',
+      detail: isId
+        ? 'Tanpa persentase peningkatan, efisiensi waktu, atau skala pengguna, rekruter sulit menilai skala kontribusi Anda.'
+        : 'Without percentages, latency reductions, or user scale, recruiters cannot gauge the magnitude of your work.',
+      fix: isId
+        ? 'Sertakan angka konkret atau gunakan penanda [X]% pada pencapaian utama Anda.'
+        : 'Include concrete metrics (e.g., [X]% faster, [number] users impacted) in at least 3 bullets.',
       rewrite: {
-        before: 'Memperbaiki performa aplikasi mobile.',
-        after: 'Mempercepat waktu startup aplikasi sebesar [X]% dan mengurangi tingkat crash hingga [X]%.',
+        before: isId ? 'Meningkatkan performa aplikasi mobile.' : 'Improved mobile application performance.',
+        after: isId
+          ? 'Mempercepat waktu muat layar utama sebesar [X]% dan menurunkan tingkat crash hingga [X]%.'
+          : 'Accelerated app cold-start time by [X]% and maintained a [X]% crash-free session rate.',
       },
     });
   }
 
-  // ----------------------------------------------------
   // 4. Language Quality & Clichés Checks
-  // ----------------------------------------------------
-  
-  // Indonesian language detected in global mode
-  const indonesianWordsRegex = /\b(pengalaman kerja|pendidikan|kemampuan|keahlian|riwayat pendidikan|tentang saya|kontak)\b/i;
-  if (indonesianWordsRegex.test(text)) {
-    issues.push({
-      id: 'indonesian_language',
-      category: 'language_quality',
-      severity: 'critical',
-      title: 'CV masih menggunakan Bahasa Indonesia untuk lamaran global',
-      detail: 'Untuk melamar lowongan remote internasional atau perusahaan multinasional, CV wajib ditulis 100% dalam Bahasa Inggris profesional yang natural.',
-      fix: 'Terjemahkan seluruh CV ke dalam Bahasa Inggris berstandar industri dengan terminologi teknis yang tepat.',
-      rewrite: {
-        before: 'Pengalaman Kerja: Pengembang Perangkat Lunak',
-        after: 'Professional Experience: Software Engineer',
-      },
-    });
-  }
-
-  // Cliché buzzwords
-  const clichesRegex = /\b(hard-working|hard working|pekerja keras|team player|bisa bekerja di bawah tekanan|able to work under pressure|out of the box|detail-oriented|detail oriented|motivated self-starter)\b/i;
+  const clichesRegex = /\b(hard-working|hard working|pekerja keras|team player|bisa bekerja di bawah tekanan|mampu bekerja di bawah tekanan|able to work under pressure|out of the box|detail-oriented)\b/i;
   if (clichesRegex.test(text)) {
     issues.push({
       id: 'cliche_words',
       category: 'language_quality',
       severity: 'suggestion',
-      title: 'Penggunaan frasa klise yang menurunkan impresi profesional',
-      detail: 'Frasa seperti "hard-working", "team player", atau "work under pressure" adalah kata klise (buzzwords) yang dipakai oleh jutaan pelamar dan diabaikan rekruter.',
-      fix: 'Tunjukkan etos kerja melalui bukti konkret proyek nyata, bukan sekadar klaim sifat subjektif.',
+      title: isId
+        ? 'Penggunaan frasa klise ("pekerja keras", "bekerja di bawah tekanan")'
+        : 'Uses subjective buzzwords ("hard-working", "work under pressure")',
+      detail: isId
+        ? 'Klaim subjektif tanpa bukti proyek nyata sering diabaikan oleh rekruter.'
+        : 'Generic buzzwords are overused and ignored by recruiters unless backed by concrete delivery metrics.',
+      fix: isId
+        ? 'Ganti klaim sifat subjektif dengan ringkasan keahlian teknis dan rekam jejak proyek.'
+        : 'Replace subjective traits with concrete technical specializations and sprint delivery evidence.',
       rewrite: {
-        before: 'A hard-working team player able to work under high pressure.',
-        after: 'Collaborated across cross-functional engineering teams to ship high-priority releases on tight 2-week sprint cycles.',
+        before: isId
+          ? 'Pekerja keras yang mampu bekerja di bawah tekanan tinggi.'
+          : 'Hard-working team player able to work under pressure.',
+        after: isId
+          ? 'Software Engineer dengan fokus pada pengembangan backend Node.js dan aplikasi lintas platform Flutter.'
+          : 'Software Engineer specializing in high-throughput Node.js microservices and cross-platform Flutter apps.',
       },
     });
   }
 
-  // ----------------------------------------------------
   // 5. Keyword Matching Evaluation
-  // ----------------------------------------------------
   const detectedRole = inferJobRole(text);
   const keywordAnalysis = analyzeKeywords(text, detectedRole);
 
@@ -355,47 +335,53 @@ function analyzeWithRules(text, fileName = 'CV.pdf') {
       id: 'missing_core_keywords',
       category: 'keyword_match',
       severity: 'warning',
-      title: `Banyak kata kunci standar industri untuk posisi ${detectedRole} belum ditemukan`,
-      detail: `ATS mencocokkan CV Anda dengan standar kata kunci posisi ${detectedRole}. Dokumen Anda belum memuat beberapa keahlian esensial.`,
-      fix: `Tambahkan keahlian teknis terkait seperti: ${keywordAnalysis.missing.slice(0, 3).join(', ')} jika memang Anda menguasainya.`,
+      title: isId
+        ? `Beberapa kata kunci industri untuk posisi ${detectedRole} belum tercantum`
+        : `Missing core industry keywords for ${detectedRole}`,
+      detail: isId
+        ? `Sistem ATS memeringkat CV berdasarkan kecocokan kata kunci teknis untuk posisi ${detectedRole}.`
+        : `ATS parsers score your resume against core technical competencies expected for a ${detectedRole}.`,
+      fix: isId
+        ? `Tambahkan keahlian relevan yang Anda kuasai seperti: ${keywordAnalysis.missing.slice(0, 3).join(', ')}.`
+        : `Incorporate relevant skills you possess such as: ${keywordAnalysis.missing.slice(0, 3).join(', ')}.`,
       rewrite: {
-        before: 'Keahlian: Pemrograman umum dan komputer',
+        before: isId ? 'Keahlian: Pemrograman dasar' : 'Skills: General programming',
         after: `Skills: ${keywordAnalysis.matched.slice(0, 3).concat(keywordAnalysis.missing.slice(0, 2)).join(', ')}`,
       },
     });
   }
 
-  // ----------------------------------------------------
-  // Score Calculation (Rule-Based Penalty)
-  // Section 4.2: Initial 100, critical: -11, warning: -7, suggestion: -3, min: 10
-  // ----------------------------------------------------
+  // Score Calculation
   let overallScore = 100;
   for (const issue of issues) {
-    if (issue.severity === 'critical') {
-      overallScore -= 11;
-    } else if (issue.severity === 'warning') {
-      overallScore -= 7;
-    } else if (issue.severity === 'suggestion') {
-      overallScore -= 3;
-    }
+    if (issue.severity === 'critical') overallScore -= 11;
+    else if (issue.severity === 'warning') overallScore -= 7;
+    else if (issue.severity === 'suggestion') overallScore -= 3;
   }
-
   overallScore = Math.max(10, Math.min(100, overallScore));
 
-  // Build high-level summary
   let summary = '';
-  if (overallScore >= 80) {
-    summary = 'CV Anda memiliki struktur yang sangat kuat dan mendekati standar ATS global. Tinggal sedikit polesan minor sebelum siap dikirim.';
-  } else if (overallScore >= 60) {
-    summary = 'CV Anda memiliki fondasi yang cukup baik, namun terdapat beberapa masalah format dan kata kunci yang perlu dipoles agar lolos filter ATS internasional.';
-  } else if (overallScore >= 40) {
-    summary = 'CV Anda memerlukan perbaikan substansial pada struktur, penghapusan data bias pribadi, dan konversi daftar tugas menjadi pencapaian terukur.';
+  if (isId) {
+    if (overallScore >= 80) {
+      summary = 'CV Anda memiliki struktur ATS yang sangat kuat dalam Bahasa Indonesia. Hanya diperlukan sedikit penyempurnaan metrik sebelum dikirim.';
+    } else if (overallScore >= 60) {
+      summary = 'CV Anda memiliki fondasi yang cukup baik, namun beberapa bagian masih bergaya daftar tugas pasif dan memerlukan tambahan kata kunci teknis.';
+    } else {
+      summary = 'CV Anda memerlukan perbaikan penting, terutama penghapusan data pribadi sensitif (foto, TTL, agama, NIK) dan konversi tugas menjadi pencapaian terukur.';
+    }
   } else {
-    summary = 'CV Anda berisiko tinggi langsung tersaring oleh ATS internasional karena menyertakan data pribadi berisiko bias hukum atau format yang tidak kompatibel.';
+    if (overallScore >= 80) {
+      summary = 'Your English CV has a strong ATS-compliant structure. Only minor metric refinements are needed before applying.';
+    } else if (overallScore >= 60) {
+      summary = 'Your CV has a solid foundation, but several bullets read like passive duties and miss key role keywords.';
+    } else {
+      summary = 'Your CV requires substantial fixes: remove personal bias fields and convert passive responsibilities into quantified STAR achievements.';
+    }
   }
 
   return {
     mode: 'global',
+    language: lang,
     overallScore,
     summary,
     issues,
@@ -407,7 +393,8 @@ function analyzeWithRules(text, fileName = 'CV.pdf') {
     },
     meta: {
       fileName,
-      analyzedAtLabel: 'Dianalisis Sistem (Aturan ATS Global)',
+      language: lang,
+      analyzedAtLabel: isId ? 'Evaluasi Bahasa Indonesia' : 'English ATS Evaluation',
       engine: 'rule-based',
     },
   };
@@ -415,8 +402,8 @@ function analyzeWithRules(text, fileName = 'CV.pdf') {
 
 module.exports = {
   analyzeWithRules,
+  detectCvLanguage,
   inferJobRole,
   analyzeKeywords,
   ROLE_KEYWORDS,
 };
-

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/pdf_generator.dart';
 import '../../providers/cv_provider.dart';
 import '../../widgets/issue_card.dart';
 import '../../widgets/placeholder_rich_text.dart';
@@ -477,18 +477,41 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: () =>
-                ref.read(cvScanProvider.notifier).runSampleDemoScan(),
-            child: const Text(
-              'Or try instant sample CV demo →',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => ref
+                    .read(cvScanProvider.notifier)
+                    .runSampleDemoScan(language: 'id'),
+                icon: const Icon(
+                  Icons.translate_rounded,
+                  size: 16,
+                  color: AppColors.terracottaBright,
+                ),
+                label: const Text(
+                  'Demo CV (Indo)',
+                  style: TextStyle(fontSize: 12.5),
+                ),
               ),
-            ),
+              OutlinedButton.icon(
+                onPressed: () => ref
+                    .read(cvScanProvider.notifier)
+                    .runSampleDemoScan(language: 'en'),
+                icon: const Icon(
+                  Icons.language_rounded,
+                  size: 16,
+                  color: AppColors.terracottaBright,
+                ),
+                label: const Text(
+                  'Demo CV (English)',
+                  style: TextStyle(fontSize: 12.5),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -500,7 +523,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
         ? 'Extracting PDF text in-memory...'
         : step == ScanStep.rewriting
             ? 'Generating Zero-Hallucination STAR Resume...'
-            : 'Auditing 5 Global ATS Pillars & Bias Rules...';
+            : 'Detecting CV Language & Auditing 5 ATS Pillars...';
 
     return Center(
       child: Padding(
@@ -558,13 +581,32 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    result.fileName,
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Text(
+                        result.isIndonesian
+                            ? '🇮🇩 Evaluasi Bahasa Indonesia'
+                            : '🇬🇧 English Evaluation',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.white,
+                        ),
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => ref.read(cvScanProvider.notifier).resetScanner(),
                     child: const Text(
@@ -911,33 +953,47 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Wrap(
               spacing: 10,
               runSpacing: 8,
               children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await PdfCvGenerator.exportAndDownloadPdf(cv);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          cv.isIndonesian
+                              ? 'Dokumen PDF CV (${cv.name}) berhasil dibuat!'
+                              : 'ATS PDF CV (${cv.name}) generated & exported!',
+                        ),
+                        backgroundColor: AppColors.emerald,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.picture_as_pdf_rounded, size: 17),
+                  label: Text(
+                    cv.isIndonesian ? 'Unduh PDF CV (.pdf)' : 'Download PDF CV (.pdf)',
+                  ),
+                ),
                 OutlinedButton.icon(
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: cv.toMarkdown()));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Markdown CV copied to clipboard!'),
+                      SnackBar(
+                        content: Text(
+                          cv.isIndonesian
+                              ? 'Teks CV berhasil disalin ke clipboard!'
+                              : 'CV text copied to clipboard!',
+                        ),
                         backgroundColor: AppColors.emerald,
                       ),
                     );
                   },
                   icon: const Icon(Icons.copy_rounded, size: 16),
-                  label: const Text('Copy'),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Share.share(
-                      cv.toMarkdown(),
-                      subject: '${cv.name} - Global ATS Resume',
-                    );
-                  },
-                  icon: const Icon(Icons.ios_share_rounded, size: 16),
-                  label: const Text('Export CV'),
+                  label: Text(cv.isIndonesian ? 'Salin Teks' : 'Copy Text'),
                 ),
               ],
             ),

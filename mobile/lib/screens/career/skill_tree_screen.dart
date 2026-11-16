@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/career_companion_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/career_provider.dart';
 
 class SkillTreeScreen extends ConsumerWidget {
@@ -299,38 +300,42 @@ class SkillTreeScreen extends ConsumerWidget {
                     const SizedBox(height: 10),
 
                     // Bottom Full-Width Dark Pill Bar (Matched 1:1 to "Log out" dark pill bar in Screen 3 of Reference)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 15,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.borderBright),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.workspace_premium_rounded,
-                            color: AppColors.terracottaBright,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: Text(
-                              'Total Career XP Earned: ${profile.totalXpEarned} XP',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.white,
+                    InkWell(
+                      onTap: () => ref.read(authProvider.notifier).signOut(),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 15,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.borderBright),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.logout_rounded,
+                              color: AppColors.terracottaBright,
+                              size: 18,
+                            ),
+                            SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                'Log out',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.white,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ],

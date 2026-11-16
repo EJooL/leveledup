@@ -166,6 +166,7 @@ router.post('/', async (req, res, next) => {
     // 4. Return complete Unlocked AnalysisResult
     const unlockedResult = {
       mode: 'global',
+      language: (decryptedData && decryptedData.language) ? decryptedData.language : 'en',
       overallScore,
       summary,
       issues: fullIssues,
@@ -176,6 +177,7 @@ router.post('/', async (req, res, next) => {
       },
       meta: {
         fileName,
+        language: (decryptedData && decryptedData.language) ? decryptedData.language : 'en',
         analyzedAtLabel: 'Dianalisis Sistem (Akses Penuh)',
         engine,
       },
