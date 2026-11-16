@@ -35,7 +35,7 @@ extension CareerStageExtension on CareerStage {
   String get subtitle {
     switch (this) {
       case CareerStage.jobHunting:
-        return 'Optimize your ATS resume, eliminate bias, and secure global interviews.';
+        return 'Optimize your ATS resume, build global proof-of-work, and land interviews.';
       case CareerStage.onboarding:
         return 'Ship your first production PR, map the architecture, and build team trust.';
       case CareerStage.midLevel:
@@ -205,11 +205,13 @@ class CareerBadge {
 class UserCareerProfile {
   final String characterName;
   final String targetRole;
-  final int level;
-  final int currentXp;
-  final int totalXpEarned;
-  final int streakDays;
+  final int? _level;
+  final int? _currentXp;
+  final int? _totalXpEarned;
+  final int? _streakDays;
   final int? latestAtsScore;
+  final int? _applicationsSent;
+  final int? _interviewsSecured;
   final CareerStage currentStage;
   final List<CareerQuest> quests;
   final List<SkillNode> skills;
@@ -218,16 +220,31 @@ class UserCareerProfile {
   UserCareerProfile({
     required this.characterName,
     required this.targetRole,
-    required this.level,
-    required this.currentXp,
-    required this.totalXpEarned,
-    required this.streakDays,
+    required int level,
+    required int currentXp,
+    required int totalXpEarned,
+    required int streakDays,
     this.latestAtsScore,
+    int applicationsSent = 3,
+    int interviewsSecured = 1,
     required this.currentStage,
     required this.quests,
     required this.skills,
     required this.badges,
-  });
+  })  : _level = level,
+        _currentXp = currentXp,
+        _totalXpEarned = totalXpEarned,
+        _streakDays = streakDays,
+        _applicationsSent = applicationsSent,
+        _interviewsSecured = interviewsSecured;
+
+  // Hot-reload safe getters so existing VM/Web instances never return null for ints
+  int get level => _level ?? 2;
+  int get currentXp => _currentXp ?? 180;
+  int get totalXpEarned => _totalXpEarned ?? 430;
+  int get streakDays => _streakDays ?? 5;
+  int get applicationsSent => _applicationsSent ?? 3;
+  int get interviewsSecured => _interviewsSecured ?? 1;
 
   int get xpToNextLevel => level * 250;
 
@@ -254,6 +271,8 @@ class UserCareerProfile {
     int? totalXpEarned,
     int? streakDays,
     int? latestAtsScore,
+    int? applicationsSent,
+    int? interviewsSecured,
     CareerStage? currentStage,
     List<CareerQuest>? quests,
     List<SkillNode>? skills,
@@ -267,6 +286,8 @@ class UserCareerProfile {
       totalXpEarned: totalXpEarned ?? this.totalXpEarned,
       streakDays: streakDays ?? this.streakDays,
       latestAtsScore: latestAtsScore ?? this.latestAtsScore,
+      applicationsSent: applicationsSent ?? this.applicationsSent,
+      interviewsSecured: interviewsSecured ?? this.interviewsSecured,
       currentStage: currentStage ?? this.currentStage,
       quests: quests ?? this.quests,
       skills: skills ?? this.skills,
@@ -274,4 +295,3 @@ class UserCareerProfile {
     );
   }
 }
-

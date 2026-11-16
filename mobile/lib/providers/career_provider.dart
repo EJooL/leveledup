@@ -13,9 +13,11 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
       totalXpEarned: 430,
       streakDays: 5,
       latestAtsScore: null,
+      applicationsSent: 3,
+      interviewsSecured: 1,
       currentStage: CareerStage.jobHunting,
       quests: [
-        // Phase 1: Job Hunting Quests
+        // Phase 1: Job Hunting Quests (Pre-Job)
         CareerQuest(
           id: 'q_scan_cv',
           title: 'Run Your First Global ATS Scan',
@@ -45,6 +47,36 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
           xpReward: 150,
           isCompleted: false,
           impactMetricTag: '+40% Interview Rate',
+        ),
+        CareerQuest(
+          id: 'q_github_pins',
+          title: 'Pin 3 Documented Repositories on GitHub',
+          description: 'Add architecture diagrams, live demo GIFs, and setup instructions to your top 3 repos.',
+          stage: CareerStage.jobHunting,
+          difficulty: QuestDifficulty.medium,
+          xpReward: 80,
+          isCompleted: false,
+          impactMetricTag: 'Portfolio Proof',
+        ),
+        CareerQuest(
+          id: 'q_linkedin_opt',
+          title: 'Optimize LinkedIn Headline with Role Keywords',
+          description: 'Align your LinkedIn headline and About section with your ATS-matched target keywords.',
+          stage: CareerStage.jobHunting,
+          difficulty: QuestDifficulty.easy,
+          xpReward: 60,
+          isCompleted: false,
+          impactMetricTag: 'Inbound Recruiters',
+        ),
+        CareerQuest(
+          id: 'q_send_5_apps',
+          title: 'Send 5 Tailored Global / Remote Applications',
+          description: 'Apply to 5 international roles using your newly rewritten ATS-compliant English resume.',
+          stage: CareerStage.jobHunting,
+          difficulty: QuestDifficulty.hard,
+          xpReward: 110,
+          isCompleted: false,
+          impactMetricTag: 'Outreach Pipeline',
         ),
 
         // Phase 2: First 90 Days (Hired / Onboarding)
@@ -241,6 +273,26 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
     state = state.copyWith(currentStage: stage, badges: updatedBadges);
   }
 
+  /// Log a sent global job application (+25 XP)
+  void logJobApplicationSent() {
+    final newCount = state.applicationsSent + 1;
+    var updatedQuests = List<CareerQuest>.from(state.quests);
+    if (newCount >= 5) {
+      final qIdx = updatedQuests.indexWhere((q) => q.id == 'q_send_5_apps');
+      if (qIdx != -1 && !updatedQuests[qIdx].isCompleted) {
+        updatedQuests[qIdx] = updatedQuests[qIdx].copyWith(isCompleted: true);
+      }
+    }
+    state = state.copyWith(applicationsSent: newCount);
+    _addXpInternal(25, updatedQuests: updatedQuests);
+  }
+
+  /// Log a secured global interview (+100 XP)
+  void logInterviewSecured() {
+    state = state.copyWith(interviewsSecured: state.interviewsSecured + 1);
+    _addXpInternal(100);
+  }
+
   /// Toggle or complete a quest and award XP
   void toggleQuestCompletion(String questId) {
     final idx = state.quests.indexWhere((q) => q.id == questId);
@@ -367,4 +419,3 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
 final careerProvider = StateNotifierProvider<CareerNotifier, UserCareerProfile>((ref) {
   return CareerNotifier();
 });
-

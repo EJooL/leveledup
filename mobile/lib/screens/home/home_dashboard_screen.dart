@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/career_companion_model.dart';
 import '../../providers/career_provider.dart';
-import '../../widgets/quest_card.dart';
-import '../../widgets/xp_level_banner.dart';
 
 class HomeDashboardScreen extends ConsumerWidget {
   final ValueChanged<int> onNavigateTab;
@@ -14,109 +13,118 @@ class HomeDashboardScreen extends ConsumerWidget {
     required this.onNavigateTab,
   });
 
-  void _showStageSelectorModal(BuildContext context, WidgetRef ref, CareerStage current) {
+  void _showStageSelectorModal(
+    BuildContext context,
+    WidgetRef ref,
+    CareerStage current,
+  ) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.explore_rounded, color: AppColors.accentCyan),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Select Your Career Stage',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.white,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'LeveledUp adapts its quests and coaching from your job hunt through your promotions.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...CareerStage.values.map((stage) {
-                final isSelected = stage == current;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () {
-                      ref.read(careerProvider.notifier).setCareerStage(stage);
-                      Navigator.pop(ctx);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.accentCyan.withValues(alpha: 0.12)
-                            : AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.accentCyan
-                              : AppColors.border,
-                          width: isSelected ? 1.5 : 1,
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.explore_rounded, color: AppColors.terracottaBright),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Select Your Career Stage',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.white,
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isSelected
-                                ? Icons.radio_button_checked_rounded
-                                : Icons.radio_button_off_rounded,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Switch between Pre-Job Hunting and Post-Hire Career Progression.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...CareerStage.values.map((stage) {
+                  final isSelected = stage == current;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        ref.read(careerProvider.notifier).setCareerStage(stage);
+                        Navigator.pop(ctx);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.terracotta.withValues(alpha: 0.16)
+                              : AppColors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
                             color: isSelected
-                                ? AppColors.accentCyan
-                                : AppColors.textMuted,
-                            size: 20,
+                                ? AppColors.terracotta
+                                : AppColors.border,
+                            width: isSelected ? 1.4 : 1,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  stage.label,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.white,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  stage.subtitle,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected
+                                  ? Icons.radio_button_checked_rounded
+                                  : Icons.radio_button_off_rounded,
+                              color: isSelected
+                                  ? AppColors.terracottaBright
+                                  : AppColors.textMuted,
+                              size: 20,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    stage.label,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    stage.subtitle,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }),
-            ],
+                  );
+                }),
+              ],
+            ),
           ),
         );
       },
@@ -131,243 +139,387 @@ class HomeDashboardScreen extends ConsumerWidget {
         .toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.trending_up_rounded,
-                color: AppColors.background,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'LEVELED UP',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.1,
-                    color: AppColors.white,
-                  ),
-                ),
-                Text(
-                  'ATS Scanner & RPG Career Companion',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 1. RPG Level & XP Banner
-            XpLevelBanner(
-              profile: profile,
-              onStageTap: () =>
-                  _showStageSelectorModal(context, ref, profile.currentStage),
-            ),
-            const SizedBox(height: 18),
-
-            // 2. Quick Telemetry Grid
-            Row(
-              children: [
-                Expanded(
-                  child: _StatMiniCard(
-                    label: 'LATEST ATS',
-                    value: profile.latestAtsScore != null
-                        ? '${profile.latestAtsScore}/100'
-                        : 'Not Scanned',
-                    icon: Icons.document_scanner_rounded,
-                    accent: profile.latestAtsScore != null
-                        ? AppColors.getScoreColor(profile.latestAtsScore!)
-                        : AppColors.accentCyan,
-                    onTap: () => onNavigateTab(1),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _StatMiniCard(
-                    label: 'QUESTS DONE',
-                    value: '${profile.completedQuestsCount}/${profile.quests.length}',
-                    icon: Icons.task_alt_rounded,
-                    accent: AppColors.emerald,
-                    onTap: () => onNavigateTab(2),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _StatMiniCard(
-                    label: 'BADGES',
-                    value: '${profile.earnedBadgesCount}/${profile.badges.length}',
-                    icon: Icons.military_tech_rounded,
-                    accent: AppColors.accentGoldBright,
-                    onTap: () => onNavigateTab(3),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
-
-            // 3. Dual Core Action Cards (CV Scanner + Post-Job Career Mode)
-            const Text(
-              'CORE MODULES',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textSecondary,
-                letterSpacing: 1.0,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.borderBright),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Top Greeting Header (Matched to Screen 2 of Reference: "Welcome back / Anarda" + Avatar)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentCyan.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profile.currentStage == CareerStage.jobHunting
+                              ? 'Global Job Hunter Mode'
+                              : 'On-The-Job Companion',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.radar_rounded,
-                          color: AppColors.accentCyan,
-                          size: 24,
+                        const SizedBox(height: 2),
+                        Text(
+                          profile.characterName,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.white,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Global ATS CV Scanner & AI Rewrite',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.white,
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Audit 5 international pillars, strip bias data & rewrite with STAR metrics (+75 XP)',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => onNavigateTab(1),
-                      icon: const Icon(Icons.upload_file_rounded, size: 18),
-                      label: const Text('Launch ATS CV Scanner'),
+                  // Avatar with Terracotta Notification Dot
+                  GestureDetector(
+                    onTap: () => onNavigateTab(3),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.border,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'LVL ${profile.level}',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.terracottaBright,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: AppColors.terracotta,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.background,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-            // 4. Current Stage Quests Preview
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'ACTIVE QUESTS — ${profile.currentStage.shortLabel.toUpperCase()}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textSecondary,
-                          letterSpacing: 0.9,
+              // 2. Visa-Style Hero Card + Vertical '+' Pill Bar (Matched 1:1 to Screen 2 of Reference)
+              SizedBox(
+                height: 176,
+                child: Row(
+                  children: [
+                    // Left Main Terracotta Gradient Card with Cropped White 'C' Ring Emblem
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFFB5462F),
+                              Color(0xFFD95B3F),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.terracotta.withValues(alpha: 0.28),
+                              blurRadius: 24,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Stack(
+                            children: [
+                              // Large cropped white 'C' / ring emblem on the right edge (exact reference match)
+                              Positioned(
+                                right: -38,
+                                top: 22,
+                                bottom: 22,
+                                child: Container(
+                                  width: 132,
+                                  height: 132,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.white.withValues(alpha: 0.92),
+                                      width: 24,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.background.withValues(alpha: 0.25),
+                                            borderRadius: BorderRadius.circular(999),
+                                          ),
+                                          child: Text(
+                                            'LEVELED UP · LVL ${profile.level}',
+                                            style: GoogleFonts.jetBrainsMono(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppColors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          profile.latestAtsScore != null
+                                              ? 'ATS ${profile.latestAtsScore}/100'
+                                              : '${profile.totalXpEarned} XP',
+                                          style: const TextStyle(
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.w900,
+                                            color: AppColors.white,
+                                            letterSpacing: -0.8,
+                                            height: 1.05,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          '${profile.currentXp} / ${profile.xpToNextLevel} XP · ${profile.rankTitle}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.white.withValues(alpha: 0.85),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      profile.currentStage.label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.white.withValues(alpha: 0.9),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        profile.currentStage.subtitle,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 12),
+                    // Right Vertical Dark Pill '+' Bar (Matched 1:1 to Screen 2 of Reference)
+                    InkWell(
+                      onTap: () => _showStageSelectorModal(
+                        context,
+                        ref,
+                        profile.currentStage,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: 48,
+                        height: double.infinity,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceElevated,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.add_rounded,
+                            color: AppColors.white,
+                            size: 24,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                TextButton(
-                  onPressed: () => onNavigateTab(2),
-                  child: const Text(
-                    'View All',
-                    style: TextStyle(
-                      color: AppColors.accentCyan,
-                      fontWeight: FontWeight.w700,
+              ),
+              const SizedBox(height: 24),
+
+              // 3. 4 Rounded-Square Quick Action Buttons Row (Matched 1:1 to Send / Request / Pay / More)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _QuickActionSquircle(
+                    icon: Icons.send_rounded,
+                    label: 'Scan CV',
+                    onTap: () => onNavigateTab(1),
+                  ),
+                  _QuickActionSquircle(
+                    icon: Icons.description_outlined,
+                    label: 'AI Rewrite',
+                    onTap: () => onNavigateTab(1),
+                  ),
+                  _QuickActionSquircle(
+                    icon: Icons.work_outline_rounded,
+                    label: 'Log App (${profile.applicationsSent})',
+                    onTap: () {
+                      ref.read(careerProvider.notifier).logJobApplicationSent();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Global job application logged! +25 Career XP!',
+                          ),
+                          backgroundColor: AppColors.terracotta,
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                  ),
+                  _QuickActionSquircle(
+                    icon: Icons.more_horiz_rounded,
+                    label: 'Stage',
+                    onTap: () => _showStageSelectorModal(
+                      context,
+                      ref,
+                      profile.currentStage,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ...stageQuests.map(
-              (quest) => QuestCard(
-                quest: quest,
-                onToggle: () => ref
-                    .read(careerProvider.notifier)
-                    .toggleQuestCompletion(quest.id),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 28),
+
+              // 4. "Recent Quests & Milestones" Transaction-Style List (Matched 1:1 to Reference)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Active Career Quests',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => onNavigateTab(2),
+                    child: const Text(
+                      'See all →',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.terracottaBright,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              ...stageQuests.map((quest) {
+                return _TransactionStyleQuestRow(
+                  quest: quest,
+                  onTap: () => ref
+                      .read(careerProvider.notifier)
+                      .toggleQuestCompletion(quest.id),
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _StatMiniCard extends StatelessWidget {
-  final String label;
-  final String value;
+class _QuickActionSquircle extends StatelessWidget {
   final IconData icon;
-  final Color accent;
+  final String label;
   final VoidCallback onTap;
 
-  const _StatMiniCard({
-    required this.label,
-    required this.value,
+  const _QuickActionSquircle({
     required this.icon,
-    required this.accent,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceElevated,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Icon(
+              icon,
+              color: AppColors.white,
+              size: 23,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TransactionStyleQuestRow extends StatelessWidget {
+  final CareerQuest quest;
+  final VoidCallback onTap;
+
+  const _TransactionStyleQuestRow({
+    required this.quest,
     required this.onTap,
   });
 
@@ -375,35 +527,90 @@ class _StatMiniCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
-          color: AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: quest.isCompleted
+                ? AppColors.emerald.withValues(alpha: 0.4)
+                : AppColors.border,
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Icon(icon, color: accent, size: 20),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: AppColors.white,
+            // Left Squircle Icon (Matching PayPal/Spotify/Adobe icon boxes in Reference)
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: quest.isCompleted
+                    ? AppColors.emerald.withValues(alpha: 0.14)
+                    : AppColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: quest.isCompleted
+                      ? AppColors.emerald.withValues(alpha: 0.4)
+                      : AppColors.border,
+                ),
+              ),
+              child: Icon(
+                quest.isCompleted
+                    ? Icons.check_circle_rounded
+                    : Icons.bolt_rounded,
+                color: quest.isCompleted
+                    ? AppColors.emerald
+                    : AppColors.terracottaBright,
+                size: 22,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(width: 14),
+            // Center Title & Subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    quest.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: quest.isCompleted
+                          ? AppColors.textSecondary
+                          : AppColors.white,
+                      decoration: quest.isCompleted
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${quest.impactMetricTag} · ${quest.difficulty.label}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Right Value (+XP in Emerald/Terracotta matching +$212 / -$212 in Reference)
             Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textMuted,
-                letterSpacing: 0.5,
+              '+${quest.xpReward} XP',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: quest.isCompleted
+                    ? AppColors.emerald
+                    : AppColors.terracottaBright,
               ),
             ),
           ],
@@ -412,4 +619,3 @@ class _StatMiniCard extends StatelessWidget {
     );
   }
 }
-

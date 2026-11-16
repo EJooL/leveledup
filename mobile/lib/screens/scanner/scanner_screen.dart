@@ -2,14 +2,13 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_colors.dart';
-import '../../models/cv_analysis_model.dart';
 import '../../providers/cv_provider.dart';
 import '../../widgets/issue_card.dart';
 import '../../widgets/placeholder_rich_text.dart';
-import '../../widgets/score_ring_painter.dart';
 
 class ScannerScreen extends ConsumerStatefulWidget {
   const ScannerScreen({super.key});
@@ -77,11 +76,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
           backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: AppColors.borderBright),
+            side: const BorderSide(color: AppColors.border),
           ),
           title: const Row(
             children: [
-              Icon(Icons.vpn_key_rounded, color: AppColors.accentGoldBright),
+              Icon(Icons.vpn_key_rounded, color: AppColors.terracottaBright),
               SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -110,10 +109,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               const SizedBox(height: 14),
               TextField(
                 controller: controller,
-                style: const TextStyle(
+                style: GoogleFonts.jetBrainsMono(
                   color: AppColors.white,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 1.0,
+                  fontSize: 14,
                 ),
                 decoration: const InputDecoration(
                   labelText: 'Access Code',
@@ -162,197 +161,334 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     final scanState = ref.watch(cvScanProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'GLOBAL ATS SCANNER',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.0,
-          ),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Builder(
+          builder: (context) {
+            if (scanState.isBusy) {
+              return _buildScanningProgress(scanState.step);
+            }
+
+            if (scanState.analysisResult != null) {
+              return _buildCurvedResultsSheet(scanState);
+            }
+
+            return _buildTiltedCardsSplashHero(scanState.errorMessage);
+          },
         ),
-        actions: [
-          if (scanState.analysisResult != null)
-            TextButton.icon(
-              onPressed: () => ref.read(cvScanProvider.notifier).resetScanner(),
-              icon: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.accentCyan),
-              label: const Text(
-                'New Scan',
-                style: TextStyle(color: AppColors.accentCyan, fontWeight: FontWeight.w700),
-              ),
-            ),
-        ],
-      ),
-      body: Builder(
-        builder: (context) {
-          if (scanState.isBusy) {
-            return _buildScanningProgress(scanState.step);
-          }
-
-          if (scanState.analysisResult != null) {
-            return _buildResultsDashboard(scanState);
-          }
-
-          return _buildUploaderHero(scanState.errorMessage);
-        },
       ),
     );
   }
 
-  Widget _buildUploaderHero(String? errorMessage) {
+  /// Matched 1:1 to Screen 1 (Top-Left) of the Reference Image:
+  /// Centered Brand Logo + Tilted 3D Dual Card Stack + Centered Headline + Bottom Pill Button
+  Widget _buildTiltedCardsSplashHero(String? errorMessage) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Headline Card
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceLight,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: AppColors.borderBright, width: 1.2),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentCyan.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.accentCyan.withValues(alpha: 0.4)),
-                  ),
-                  child: const Text(
-                    'INTERNATIONAL ATS STANDARD • +75 XP',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.accentCyan,
-                      letterSpacing: 0.7,
-                    ),
-                  ),
+          // 1. Centered Top Brand Mark (Matched to AtomBank top logo in Screen 1)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.terracotta,
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Beat the ATS Filter.\nLand Global Interviews.',
+                child: const Icon(
+                  Icons.arrow_upward_rounded,
+                  color: AppColors.white,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text.rich(
+                TextSpan(
                   style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.white,
-                    height: 1.2,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
                   ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Upload your PDF resume to detect Indonesian personal data bias (photo, TTL, religion, marital status), passive duty bullets, and missing industry keywords.',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    color: AppColors.textSecondary,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 22),
-
-                // Upload Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _pickPdfDocument,
-                    icon: const Icon(Icons.picture_as_pdf_rounded),
-                    label: const Text('Select PDF Resume (Max 4 MB)'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // 1-Tap Sample Demo Scan Button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        ref.read(cvScanProvider.notifier).runSampleDemoScan(),
-                    icon: const Icon(
-                      Icons.bolt_rounded,
-                      color: AppColors.accentGoldBright,
-                    ),
-                    label: const Text('Try Instant Demo Scan (Sample CV)'),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.shield_outlined, size: 14, color: AppColors.textMuted),
-                    SizedBox(width: 6),
-                    Text(
-                      'Processed in-memory only. Never stored on disk.',
-                      style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                    TextSpan(
+                      text: 'Leveled',
+                      style: TextStyle(color: AppColors.white),
+                    ),
+                    TextSpan(
+                      text: 'Up',
+                      style: TextStyle(color: AppColors.terracotta),
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 36),
+
+          // 2. Floating Tilted 3D Card Stack (Matched 1:1 to Screen 1 of Reference)
+          GestureDetector(
+            onTap: _pickPdfDocument,
+            child: SizedBox(
+              height: 235,
+              width: double.infinity,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Subtle radial terracotta glow behind cards
+                  Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          AppColors.terracotta.withValues(alpha: 0.22),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Back Tilted Card (White/Light Slate tilted right)
+                  Transform.translate(
+                    offset: const Offset(10, 28),
+                    child: Transform.rotate(
+                      angle: 0.14,
+                      child: Container(
+                        width: 265,
+                        height: 158,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E24),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: AppColors.borderBright),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.45),
+                              blurRadius: 20,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              'GLOBAL ATS ENGINE · 5 PILLARS',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 10,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Zero-Hallucination AI Rewrite',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Front Tilted Card (Terracotta Gradient tilted left with Cropped White Ring)
+                  Transform.translate(
+                    offset: const Offset(-6, -14),
+                    child: Transform.rotate(
+                      angle: -0.12,
+                      child: Container(
+                        width: 270,
+                        height: 162,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFFB5462F),
+                              Color(0xFFE06348),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.terracotta.withValues(alpha: 0.4),
+                              blurRadius: 24,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                right: -34,
+                                top: 18,
+                                bottom: 18,
+                                child: Container(
+                                  width: 120,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.white.withValues(alpha: 0.92),
+                                      width: 22,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(18),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'ATS SCORE',
+                                      style: GoogleFonts.jetBrainsMono(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.white.withValues(alpha: 0.8),
+                                      ),
+                                    ),
+                                    const Text(
+                                      '92 / 100',
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w900,
+                                        color: AppColors.white,
+                                        letterSpacing: -0.8,
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'TAP TO UPLOAD PDF (MAX 4MB)',
+                                          style: GoogleFonts.jetBrainsMono(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.white.withValues(alpha: 0.9),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Global Ready · Zero Bias',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.white.withValues(alpha: 0.8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 36),
+
+          // 3. Centered Bold Headline & Subtitle (Matched 1:1 to "Easy Way to Save Your Money" in Screen 1)
+          const Text.rich(
+            TextSpan(
+              style: TextStyle(
+                fontSize: 27,
+                fontWeight: FontWeight.w700,
+                height: 1.22,
+                letterSpacing: -0.3,
+              ),
+              children: [
+                TextSpan(
+                  text: 'Pass ATS Before\n',
+                  style: TextStyle(color: AppColors.white),
+                ),
+                TextSpan(
+                  text: 'Getting Rejected',
+                  style: TextStyle(color: AppColors.terracottaBright),
+                ),
               ],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              'The best companion to scan your PDF resume, fix fatal ATS flaws, and level up your global career.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13.5,
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
             ),
           ),
 
           if (errorMessage != null) ...[
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppColors.crimson.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.crimson),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.error_outline_rounded, color: AppColors.crimson),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      errorMessage,
-                      style: const TextStyle(color: AppColors.white, fontSize: 13),
-                    ),
-                  ),
-                ],
+              child: Text(
+                errorMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.white, fontSize: 12.5),
               ),
             ),
           ],
 
-          const SizedBox(height: 24),
-          const Text(
-            '5 GLOBAL ATS PILLARS WE AUDIT',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textSecondary,
-              letterSpacing: 0.9,
+          const SizedBox(height: 32),
+
+          // 4. Full-Width Stadium Pill CTA Button (Matched 1:1 to "Get Started" pill in Screen 1)
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: _pickPdfDocument,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.terracotta,
+                foregroundColor: AppColors.white,
+                shape: const StadiumBorder(),
+              ),
+              child: const Text(
+                'Scan CV (PDF) — Free',
+                style: TextStyle(
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 12),
-          const _PillarExplainRow(
-            icon: Icons.person_off_rounded,
-            title: '1. Anti-Bias Personal Info (EEOC)',
-            subtitle: 'Flags photos, age/TTL, marital status, religion, and NIK that trigger auto-rejection abroad.',
-          ),
-          const _PillarExplainRow(
-            icon: Icons.view_headline_rounded,
-            title: '2. ATS Parser Readability',
-            subtitle: 'Detects multi-column collisions, complex tables, and unreadable graphic headers.',
-          ),
-          const _PillarExplainRow(
-            icon: Icons.key_rounded,
-            title: '3. Role Keyword Alignment',
-            subtitle: 'Matches your skills against target global engineering & product job benchmarks.',
-          ),
-          const _PillarExplainRow(
-            icon: Icons.insights_rounded,
-            title: '4. STAR Quantified Achievements',
-            subtitle: 'Identifies passive "Responsible for..." duties and converts them into measurable outcomes.',
-          ),
-          const _PillarExplainRow(
-            icon: Icons.spellcheck_rounded,
-            title: '5. International English Quality',
-            subtitle: 'Eliminates stiff literal translations and empty buzzwords ("hard-working", "under pressure").',
+          TextButton(
+            onPressed: () =>
+                ref.read(cvScanProvider.notifier).runSampleDemoScan(),
+            child: const Text(
+              'Or try instant sample CV demo →',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
           ),
         ],
       ),
@@ -373,11 +509,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(
-              width: 68,
-              height: 68,
+              width: 60,
+              height: 60,
               child: CircularProgressIndicator(
-                color: AppColors.accentCyan,
-                strokeWidth: 5,
+                color: AppColors.terracotta,
+                strokeWidth: 4.5,
               ),
             ),
             const SizedBox(height: 24),
@@ -405,265 +541,263 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     );
   }
 
-  Widget _buildResultsDashboard(CvScanState scanState) {
+  /// Matched 1:1 to Screen 4 (Bottom-Left in Reference):
+  /// Centered Top Metric Header + Curved Top Sheet + 2-Column Overview Square Cards + Issues
+  Widget _buildCurvedResultsSheet(CvScanState scanState) {
     final result = scanState.analysisResult!;
     final isUnlocked = result.isUnlocked;
+    final matchedCount = result.keywordMatch?.matched.length ?? 0;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Score Ring + Summary Header Card
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceLight,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.borderBright),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    ScoreRingWidget(score: result.overallScore, size: 130),
-                    const SizedBox(width: 18),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.white.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              result.fileName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${result.issues.length} ATS Issues Detected',
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            result.summary,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              color: AppColors.textSecondary,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
+    return Column(
+      children: [
+        // 1. Centered Top Metric Header (Matched to "Total Balance / $1,929.21" in Screen 4)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    result.fileName,
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
                     ),
-                  ],
-                ),
-                if (!isUnlocked) ...[
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _showUnlockModal,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accentGoldBright,
-                        foregroundColor: AppColors.background,
-                      ),
-                      icon: const Icon(Icons.lock_open_rounded, size: 18),
-                      label: const Text(
-                        'Unlock Full Fixes & AI Rewrite (VIP Code)',
+                  ),
+                  GestureDetector(
+                    onTap: () => ref.read(cvScanProvider.notifier).resetScanner(),
+                    child: const Text(
+                      'New Scan ↺',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.terracottaBright,
                       ),
                     ),
                   ),
                 ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-
-          // 2. Keyword Match Section
-          if (result.keywordMatch != null) ...[
-            _buildKeywordCard(result.keywordMatch!, isUnlocked),
-            const SizedBox(height: 20),
-          ],
-
-          // 3. Detected Issues List
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+              ),
+              const SizedBox(height: 10),
               const Text(
-                'DIAGNOSTIC ISSUES BY PILLAR',
+                'Overall ATS Readiness',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${result.overallScore} / 100',
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.white,
+                  letterSpacing: -1.0,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${AppColors.getScoreLabel(result.overallScore)} · ${result.issues.length} flaws detected',
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textSecondary,
-                  letterSpacing: 0.9,
-                ),
-              ),
-              Text(
-                isUnlocked ? 'UNLOCKED' : 'FREE PREVIEW',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: isUnlocked ? AppColors.emerald : AppColors.accentGold,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.getScoreColor(result.overallScore),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          ...result.issues.map(
-            (issue) => IssueCard(
-              issue: issue,
-              onUnlockTap: isUnlocked ? null : _showUnlockModal,
-            ),
-          ),
-          const SizedBox(height: 20),
+        ),
 
-          // 4. AI Zero-Hallucination Resume Rewrite Section
-          _buildRewriteSection(scanState),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildKeywordCard(KeywordMatch kw, bool isUnlocked) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.key_rounded, color: AppColors.accentCyan, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Role Benchmark: ${kw.jobTitle ?? "Software Engineer"}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.white,
-                  ),
-                ),
+        // 2. Curved Sheet Container (Matched to the rounded top sheet in Screen 4 & 5)
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              border: Border(
+                top: BorderSide(color: AppColors.border, width: 1),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'MATCHED KEYWORDS',
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w800,
-              color: AppColors.emerald,
-              letterSpacing: 0.6,
             ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: kw.matched
-                .map(
-                  (m) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.emerald.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppColors.emerald.withValues(alpha: 0.4)),
-                    ),
-                    child: Text(
-                      m,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.emerald,
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'MISSING KEYWORDS (${kw.missingCount})',
-                style: const TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.amber,
-                  letterSpacing: 0.6,
-                ),
-              ),
-              if (!isUnlocked)
-                GestureDetector(
-                  onTap: _showUnlockModal,
-                  child: const Text(
-                    'Unlock to reveal',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.accentGoldBright,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          if (isUnlocked && kw.missing.isNotEmpty)
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: kw.missing
-                  .map(
-                    (m) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.amber.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AppColors.amber.withValues(alpha: 0.4)),
-                      ),
-                      child: Text(
-                        '+ $m',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.amber,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 36),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Unlock Pill Action Bar (Matched to dark pill bar at top of sheet in Screen 5)
+                  if (!isUnlocked) ...[
+                    InkWell(
+                      onTap: _showUnlockModal,
+                      borderRadius: BorderRadius.circular(999),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 13,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.terracotta,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.lock_open_rounded,
+                              color: AppColors.white,
+                              size: 17,
+                            ),
+                            SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Unlock Full Fixes & AI Rewrite (VIP Code)',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  )
-                  .toList(),
-            )
-          else
-            const Text(
-              '🔒 Missing industry keywords are hidden in the free preview.',
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // 2-Column Colored Square Overview Cards (Matched 1:1 to Income / Outcome squares in Screen 4)
+                  const Text(
+                    'Overview',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: AppColors.terracotta,
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.check_circle_outline_rounded,
+                                  color: AppColors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Text(
+                                'Matched Skills',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.white.withValues(alpha: 0.8),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '$matchedCount Keywords',
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceElevated,
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.terracotta.withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: AppColors.terracottaBright,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              const Text(
+                                'ATS Flaws',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${result.issues.length} Issues',
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Diagnostic Issues List
+                  const Text(
+                    'Diagnostic Flaws',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...result.issues.map(
+                    (issue) => IssueCard(
+                      issue: issue,
+                      onUnlockTap: isUnlocked ? null : _showUnlockModal,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // AI Zero-Hallucination Rewrite Section
+                  _buildRewriteSection(scanState),
+                ],
+              ),
             ),
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -671,35 +805,35 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     final cv = scanState.rewrittenCv;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
+        color: AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.accentCyan.withValues(alpha: 0.45)),
+        border: Border.all(color: AppColors.terracotta.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.auto_awesome_rounded, color: AppColors.accentCyan),
-              const SizedBox(width: 10),
-              const Expanded(
+              Icon(Icons.auto_awesome_rounded, color: AppColors.terracottaBright),
+              SizedBox(width: 10),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'AI Zero-Hallucination Resume Rewrite',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: AppColors.white,
                       ),
                     ),
                     Text(
-                      'Converts your CV to single-column English STAR format with [placeholder] tags (+150 XP)',
+                      'Single-column English STAR format with [placeholder] tags (+150 XP)',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -708,72 +842,23 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
+          const SizedBox(height: 14),
           if (cv == null)
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              child: ElevatedButton(
                 onPressed: () =>
                     ref.read(cvScanProvider.notifier).generateAiRewrite(),
-                icon: const Icon(Icons.bolt_rounded),
-                label: const Text('Generate ATS-Optimized Resume (+150 XP)'),
+                child: const Text('Rewrite CV Automatically (+150 XP)'),
               ),
             )
           else ...[
-            // Changes Log
             Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'WHAT WE OPTIMIZED (ANTI-FABRICATION ACTIVE)',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.accentGoldBright,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  ...cv.changes.map(
-                    (c) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('• ', style: TextStyle(color: AppColors.emerald)),
-                          Expanded(
-                            child: Text(
-                              c,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Rewritten CV Document Preview
-            Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.borderBright),
+                border: Border.all(color: AppColors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -781,7 +866,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   Text(
                     cv.name,
                     style: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.w900,
                       color: AppColors.white,
                     ),
@@ -789,65 +874,34 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   Text(
                     cv.title,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.accentCyan,
+                      color: AppColors.terracottaBright,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    cv.contact.join(' • '),
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const Divider(height: 24),
-                  const Text(
-                    'EXECUTIVE SUMMARY',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.white,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
+                  const Divider(height: 20),
                   PlaceholderRichText(text: cv.summary),
-                  const SizedBox(height: 16),
-
+                  const SizedBox(height: 12),
                   ...cv.sections.map(
                     (sec) => Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.only(bottom: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             sec.heading.toUpperCase(),
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.w800,
                               color: AppColors.white,
-                              letterSpacing: 0.8,
+                              letterSpacing: 0.7,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           ...sec.bullets.map(
                             (b) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    '•  ',
-                                    style: TextStyle(
-                                      color: AppColors.accentCyan,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  Expanded(child: PlaceholderRichText(text: b)),
-                                ],
-                              ),
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: PlaceholderRichText(text: '• $b'),
                             ),
                           ),
                         ],
@@ -857,38 +911,33 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-
-            // Export Actions (Copy & Share)
-            Row(
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 8,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: cv.toMarkdown()));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Markdown CV copied to clipboard!'),
-                          backgroundColor: AppColors.emerald,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.copy_rounded, size: 17),
-                    label: const Text('Copy Markdown'),
-                  ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: cv.toMarkdown()));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Markdown CV copied to clipboard!'),
+                        backgroundColor: AppColors.emerald,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.copy_rounded, size: 16),
+                  label: const Text('Copy'),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Share.share(
-                        cv.toMarkdown(),
-                        subject: '${cv.name} - Global ATS Resume',
-                      );
-                    },
-                    icon: const Icon(Icons.ios_share_rounded, size: 17),
-                    label: const Text('Export / Share'),
-                  ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Share.share(
+                      cv.toMarkdown(),
+                      subject: '${cv.name} - Global ATS Resume',
+                    );
+                  },
+                  icon: const Icon(Icons.ios_share_rounded, size: 16),
+                  label: const Text('Export CV'),
                 ),
               ],
             ),
@@ -898,60 +947,3 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     );
   }
 }
-
-class _PillarExplainRow extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _PillarExplainRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: AppColors.accentCyan, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.white,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-

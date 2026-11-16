@@ -11,11 +11,9 @@ void main() {
       ),
     );
 
-    expect(find.text('LEVELED UP'), findsOneWidget);
     expect(find.text('Command Hub'), findsOneWidget);
     expect(find.text('ATS Scanner'), findsOneWidget);
     expect(find.text('Quest Log'), findsOneWidget);
     expect(find.text('Skill Tree'), findsOneWidget);
   });
 }
-

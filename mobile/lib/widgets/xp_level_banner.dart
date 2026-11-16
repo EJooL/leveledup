@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
 import '../models/career_companion_model.dart';
 
@@ -15,25 +16,18 @@ class XpLevelBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF0F172A),
-            Color(0xFF020617),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: AppColors.white.withValues(alpha: 0.14),
-          width: 1.2,
+          color: AppColors.border,
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accentCyan.withValues(alpha: 0.08),
-            blurRadius: 24,
+            color: AppColors.terracotta.withValues(alpha: 0.08),
+            blurRadius: 28,
             offset: const Offset(0, 8),
           ),
         ],
@@ -41,84 +35,78 @@ class XpLevelBanner extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row: Level Hexagon Badge + Name/Rank + Streak Flame
+          // Top row: Level Squircle Badge + Name/Rank + Streak Pill
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Level Shield
+              // Terracotta Level Squircle
               Container(
-                width: 56,
-                height: 56,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.accentGoldBright, AppColors.accentGold],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accentGold.withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  color: AppColors.terracotta,
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'LVL',
-                      style: TextStyle(
-                        fontSize: 10,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 9.5,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.background,
-                        letterSpacing: 0.8,
+                        color: AppColors.white.withValues(alpha: 0.85),
                       ),
                     ),
                     Text(
                       '${profile.level}',
                       style: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.w900,
-                        color: AppColors.background,
+                        color: AppColors.white,
                         height: 1.0,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 14),
-              // Player Info
+              const SizedBox(width: 12),
+              // Player Info (Using Wrap to prevent any horizontal overflow)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           profile.characterName,
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.w800,
                             color: AppColors.white,
                           ),
                         ),
-                        const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2.5,
+                          ),
                           decoration: BoxDecoration(
-                            color: AppColors.accentCyan.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
+                            color: AppColors.terracotta.withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(999),
                             border: Border.all(
-                              color: AppColors.accentCyan.withValues(alpha: 0.4),
+                              color: AppColors.terracotta.withValues(alpha: 0.45),
                             ),
                           ),
                           child: Text(
                             profile.rankTitle,
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.accentCyan,
+                              color: AppColors.terracottaBright,
                             ),
                           ),
                         ),
@@ -127,8 +115,10 @@ class XpLevelBanner extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       profile.targetRole,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: AppColors.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
@@ -136,12 +126,13 @@ class XpLevelBanner extends StatelessWidget {
                   ],
                 ),
               ),
-              // Streak Counter
+              const SizedBox(width: 8),
+              // Streak Counter Pill
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: AppColors.border),
                 ),
                 child: Row(
@@ -149,14 +140,14 @@ class XpLevelBanner extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.local_fire_department_rounded,
-                      color: AppColors.accentGold,
-                      size: 18,
+                      color: AppColors.terracottaBright,
+                      size: 15,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 3),
                     Text(
                       '${profile.streakDays}d',
-                      style: const TextStyle(
-                        fontSize: 13,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w800,
                         color: AppColors.white,
                       ),
@@ -166,36 +157,29 @@ class XpLevelBanner extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
           // XP Progress Label Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.bolt_rounded,
-                    color: AppColors.accentGoldBright,
-                    size: 16,
+              Flexible(
+                child: Text(
+                  'CAREER XP · ${profile.currentXp} / ${profile.xpToNextLevel}',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.white,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'CAREER XP: ${profile.currentXp} / ${profile.xpToNextLevel}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.white,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                ],
+                ),
               ),
+              const SizedBox(width: 8),
               Text(
-                '${profile.xpToNextLevel - profile.currentXp} XP to Level ${profile.level + 1}',
+                '${profile.xpToNextLevel - profile.currentXp} XP to Lvl ${profile.level + 1}',
                 style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                  color: AppColors.textMuted,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -203,60 +187,60 @@ class XpLevelBanner extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // Animated XP Bar
+          // Terracotta XP Progress Bar
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: profile.levelProgress,
-              minHeight: 10,
+              minHeight: 8,
               backgroundColor: AppColors.surfaceElevated,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentGoldBright),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.terracotta),
             ),
           ),
           const SizedBox(height: 14),
 
-          // Active Career Phase Switcher Bar
+          // Active Career Phase Switcher Pill
           InkWell(
             onTap: onStageTap,
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: AppColors.white.withValues(alpha: 0.05),
+                color: AppColors.surfaceElevated,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.border),
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.compass_calibration_rounded,
-                    color: AppColors.accentCyan,
-                    size: 18,
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: AppColors.terracotta,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       profile.currentStage.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: AppColors.white,
                       ),
                     ),
                   ),
+                  const SizedBox(width: 6),
                   const Text(
-                    'Switch Phase',
+                    'Switch →',
                     style: TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.accentCyan,
+                      color: AppColors.terracottaBright,
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.keyboard_arrow_right_rounded,
-                    color: AppColors.accentCyan,
-                    size: 16,
                   ),
                 ],
               ),
@@ -267,4 +251,3 @@ class XpLevelBanner extends StatelessWidget {
     );
   }
 }
-
