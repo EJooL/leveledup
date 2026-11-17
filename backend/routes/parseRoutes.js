@@ -5,7 +5,7 @@ const { parsePdfBuffer } = require('../services/pdfService');
 
 /**
  * POST /api/parse
- * Accepts a PDF file upload (up to 4MB) and returns extracted text and page count.
+ * Accepts a PDF file upload (up to 4MB) and returns extracted text, page count, and embedded photo flag.
  */
 router.post('/', upload.single('file'), async (req, res, next) => {
   try {
@@ -23,6 +23,7 @@ router.post('/', upload.single('file'), async (req, res, next) => {
       fileName: parsedData.fileName,
       numPages: parsedData.numPages,
       numChars: parsedData.numChars,
+      hasPhoto: parsedData.hasPhoto,
       text: parsedData.text,
     });
   } catch (err) {
@@ -31,4 +32,3 @@ router.post('/', upload.single('file'), async (req, res, next) => {
 });
 
 module.exports = router;
-

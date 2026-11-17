@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/career_icons.dart';
 import '../../models/career_companion_model.dart';
 import '../../providers/career_provider.dart';
+import '../../widgets/career_icon_badge.dart';
 
 class QuestLogScreen extends ConsumerStatefulWidget {
   const QuestLogScreen({super.key});
@@ -364,25 +366,14 @@ class _SavingPlanStyleQuestCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Left Squircle Icon
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: quest.isCompleted
-                    ? AppColors.emerald.withValues(alpha: 0.16)
-                    : AppColors.terracotta.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: Icon(
-                quest.isCompleted
-                    ? Icons.check_circle_rounded
-                    : Icons.flag_rounded,
-                color: quest.isCompleted
-                    ? AppColors.emerald
-                    : AppColors.terracottaBright,
-                size: 21,
-              ),
+            // Left Squircle Icon (Varied per quest with completion badge)
+            CareerIconBadge(
+              icon: CareerIcons.forQuest(quest),
+              accentColor: CareerIcons.forQuestAccent(quest),
+              size: 44,
+              radius: 13,
+              iconSize: 21,
+              showCompletedBadge: quest.isCompleted,
             ),
             const SizedBox(width: 14),
             // Right Title + XP Fraction + Horizontal Progress Bar

@@ -594,8 +594,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                       ),
                       child: Text(
                         result.isIndonesian
-                            ? '🇮🇩 Evaluasi Bahasa Indonesia'
-                            : '🇬🇧 English Evaluation',
+                            ? '🇮🇩 Indonesian CV Evaluation'
+                            : '🇬🇧 English CV Evaluation',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -960,40 +960,31 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               children: [
                 ElevatedButton.icon(
                   onPressed: () async {
-                    await PdfCvGenerator.exportAndDownloadPdf(cv);
+                    final savedPath =
+                        await PdfCvGenerator.exportAndDownloadPdf(cv);
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                          cv.isIndonesian
-                              ? 'Dokumen PDF CV (${cv.name}) berhasil dibuat!'
-                              : 'ATS PDF CV (${cv.name}) generated & exported!',
-                        ),
+                        content: Text('PDF CV saved locally to $savedPath!'),
                         backgroundColor: AppColors.emerald,
                       ),
                     );
                   },
-                  icon: const Icon(Icons.picture_as_pdf_rounded, size: 17),
-                  label: Text(
-                    cv.isIndonesian ? 'Unduh PDF CV (.pdf)' : 'Download PDF CV (.pdf)',
-                  ),
+                  icon: const Icon(Icons.download_rounded, size: 17),
+                  label: const Text('Download PDF CV (.pdf)'),
                 ),
                 OutlinedButton.icon(
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: cv.toMarkdown()));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          cv.isIndonesian
-                              ? 'Teks CV berhasil disalin ke clipboard!'
-                              : 'CV text copied to clipboard!',
-                        ),
+                      const SnackBar(
+                        content: Text('CV text copied to clipboard!'),
                         backgroundColor: AppColors.emerald,
                       ),
                     );
                   },
                   icon: const Icon(Icons.copy_rounded, size: 16),
-                  label: Text(cv.isIndonesian ? 'Salin Teks' : 'Copy Text'),
+                  label: const Text('Copy Text'),
                 ),
               ],
             ),

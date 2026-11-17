@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/career_icons.dart';
 import '../../models/career_companion_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/career_provider.dart';
+import '../../widgets/career_icon_badge.dart';
 
 class SkillTreeScreen extends ConsumerWidget {
   const SkillTreeScreen({super.key});
@@ -130,18 +132,13 @@ class SkillTreeScreen extends ConsumerWidget {
                             ),
                             child: Row(
                               children: [
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.terracotta.withValues(alpha: 0.16),
-                                    borderRadius: BorderRadius.circular(13),
-                                  ),
-                                  child: const Icon(
-                                    Icons.shield_outlined,
-                                    color: AppColors.terracottaBright,
-                                    size: 22,
-                                  ),
+                                CareerIconBadge(
+                                  icon: CareerIcons.forSkill(skill),
+                                  accentColor: CareerIcons.forSkillAccent(skill),
+                                  size: 44,
+                                  radius: 13,
+                                  iconSize: 22,
+                                  showCompletedBadge: skill.isMaxed,
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(

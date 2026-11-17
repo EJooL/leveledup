@@ -98,6 +98,7 @@ class CvScanNotifier extends StateNotifier<CvScanState> {
       final analyzed = await _apiClient.analyzeCvText(
         text: parsed.text,
         fileName: parsed.fileName,
+        hasPhoto: parsed.hasPhoto,
       );
 
       state = state.copyWith(

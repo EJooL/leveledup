@@ -11,7 +11,7 @@ const { pool } = require('../config/db');
  */
 router.post('/', async (req, res, next) => {
   try {
-    const { text, fileName = 'CV.pdf', deviceId = null, numPages = 1 } = req.body;
+    const { text, fileName = 'CV.pdf', deviceId = null, numPages = 1, hasPhoto = false } = req.body;
 
     if (!text || typeof text !== 'string' || text.trim().length < 80) {
       return res.status(400).json({
@@ -24,7 +24,9 @@ router.post('/', async (req, res, next) => {
     const cleanFileName = (typeof fileName === 'string' && fileName.trim()) ? fileName.trim() : 'CV.pdf';
 
     // Run ATS analysis (Gemini or Rule-Based heuristic)
-    const fullResult = await analyzeCv(cleanText, cleanFileName);
+    const fullResult = await analyzeCv(cleanText, cleanFileName, {
+      hasPhoto: Boolean(hasPhoto),
+    });
     const scanToken = generateScanToken();
 
     // Prepare encrypted token sealing the locked premium details

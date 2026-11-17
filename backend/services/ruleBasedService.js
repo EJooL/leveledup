@@ -128,13 +128,14 @@ function analyzeKeywords(text, role) {
  * @param {string} fileName - File name
  * @returns {object} Full analysis result
  */
-function analyzeWithRules(text, fileName = 'CV.pdf') {
+function analyzeWithRules(text, fileName = 'CV.pdf', options = {}) {
   const lang = detectCvLanguage(text);
   const isId = lang === 'id';
   const issues = [];
 
-  // 1. Personal Info Bias Checks
-  if (/foto|photo|pasfoto|pas foto|image|picture|headshot/i.test(text) || /\b(fotocopy|foto\s*diri)\b/i.test(text)) {
+  // 1. Personal Info Bias Checks (Strict evidence-only matching — no false positives on "image"/"photo")
+  const explicitPhotoTextRegex = /\b(pas\s*foto|pasfoto|foto\s*diri|foto\s*4x6|foto\s*3x4|photo\s*:\s*headshot|headshot\s*attached|foto\s*terlampir)\b/i;
+  if (options.hasPhoto === true || explicitPhotoTextRegex.test(text)) {
     issues.push({
       id: 'photo',
       category: 'personal_info',
@@ -191,7 +192,7 @@ function analyzeWithRules(text, fileName = 'CV.pdf') {
     });
   }
 
-  if (/agama\s*:|religion\s*:|islam|kristen|katolik|hindu|buddha|khonghucu/i.test(text)) {
+  if (/\b(agama|religion)\s*:/i.test(text)) {
     issues.push({
       id: 'religion',
       category: 'personal_info',

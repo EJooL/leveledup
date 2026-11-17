@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/career_icons.dart';
 import '../../models/career_companion_model.dart';
 import '../../providers/career_provider.dart';
+import '../../widgets/career_icon_badge.dart';
 
 class HomeDashboardScreen extends ConsumerWidget {
   final ValueChanged<int> onNavigateTab;
@@ -542,30 +544,14 @@ class _TransactionStyleQuestRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Left Squircle Icon (Matching PayPal/Spotify/Adobe icon boxes in Reference)
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: quest.isCompleted
-                    ? AppColors.emerald.withValues(alpha: 0.14)
-                    : AppColors.surfaceElevated,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: quest.isCompleted
-                      ? AppColors.emerald.withValues(alpha: 0.4)
-                      : AppColors.border,
-                ),
-              ),
-              child: Icon(
-                quest.isCompleted
-                    ? Icons.check_circle_rounded
-                    : Icons.bolt_rounded,
-                color: quest.isCompleted
-                    ? AppColors.emerald
-                    : AppColors.terracottaBright,
-                size: 22,
-              ),
+            // Left Squircle Icon (Varied per quest with completion badge)
+            CareerIconBadge(
+              icon: CareerIcons.forQuest(quest),
+              accentColor: CareerIcons.forQuestAccent(quest),
+              size: 46,
+              radius: 14,
+              iconSize: 22,
+              showCompletedBadge: quest.isCompleted,
             ),
             const SizedBox(width: 14),
             // Center Title & Subtitle

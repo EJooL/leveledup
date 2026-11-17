@@ -63,115 +63,204 @@ Return ONLY a valid JSON object matching this schema:
 }
 
 /**
- * Generate a rule-based fallback rewrite matching the detected language ('id' or 'en')
+ * Generate a dynamic rule-based rewrite that preserves the candidate's actual
+ * experience, education, and skills from [text] while upgrading passive lines
+ * into STAR-method bullets with [placeholder] tags.
  */
 function generateFallbackRewrite(text) {
   const lang = detectCvLanguage(text);
   const isId = lang === 'id';
   const role = inferJobRole(text);
 
-  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-  let applicantName = 'Budi Santoso';
+  const rawLines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  // 1. Filter out personal bias lines (photo, TTL, religion, marital status, NIK)
+  const biasLineRx =
+    /^(pas\s*foto|foto\s*:|photo\s*:|tempat\s*[/,&]?\s*tanggal\s*lahir|tanggal\s*lahir|ttl\s*:|date\s*of\s*birth|dob\s*:|agama\s*:|religion\s*:|status\s*pernikahan|status\s*perkawinan|marital\s*status|nik\s*:|no\.?\s*ktp|jenis\s*kelamin|gender\s*:)/i;
+  const lines = rawLines.filter((l) => !biasLineRx.test(l));
+
+  // 2. Extract Candidate Name & Title
+  let applicantName = 'Professional Candidate';
   if (
     lines.length > 0 &&
-    lines[0].length < 40 &&
-    !/cv|resume|curriculum/i.test(lines[0])
+    lines[0].length < 48 &&
+    !/^(cv|resume|curriculum|daftar\s+riwayat)/i.test(lines[0])
   ) {
     applicantName = lines[0].replace(/^(nama\s*:|name\s*:)/i, '').trim();
+  } else if (lines.length > 1 && lines[1].length < 48) {
+    applicantName = lines[1].replace(/^(nama\s*:|name\s*:)/i, '').trim();
   }
 
+  let applicantTitle = role;
+  if (
+    lines.length > 1 &&
+    lines[1].length < 55 &&
+    !/@|\d{4}|\+62|08/.test(lines[1]) &&
+    !/^(ringkasan|summary|tentang|profile|pengalaman|experience|pendidikan|education)/i.test(
+      lines[1]
+    )
+  ) {
+    applicantTitle = lines[1];
+  }
+
+  // 3. Extract Contact Info
   const emailMatch = text.match(
     /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
   );
-  const phoneMatch = text.match(/(\+62|08|62)[\d\s-]{8,14}/);
+  const phoneMatch = text.match(/(\+62|08|62)[\d\s-]{8,15}/);
+  const linkedinMatch = text.match(/linkedin\.com\/in\/[a-zA-Z0-9_-]+/i);
 
   const contact = [
-    emailMatch ? emailMatch[0] : 'budi.santoso@example.com',
-    phoneMatch ? phoneMatch[0].replace(/\s+/g, ' ') : '+62 812 3456 7890',
-    isId ? 'Jakarta, Indonesia' : 'Jakarta, Indonesia (Open to Remote)',
-    'linkedin.com/in/budisantoso',
-    'github.com/budisantoso',
+    emailMatch ? emailMatch[0] : '[email@domain.com]',
+    phoneMatch ? phoneMatch[0].replace(/\s+/g, ' ').trim() : '[+62 8XX XXXX XXXX]',
+    isId ? 'Indonesia' : 'Indonesia (Open to Remote)',
+    linkedinMatch ? linkedinMatch[0] : 'linkedin.com/in/[profil-anda]',
   ];
 
-  if (isId) {
-    return {
-      cv: {
-        language: 'id',
-        name: applicantName,
-        title: role,
-        contact,
-        summary: `${role} berorientasi hasil dengan pengalaman praktis dalam membangun sistem perangkat lunak yang andal dan skalabel. Terbukti mampu berkolaborasi lintas tim untuk mengoptimalkan performa sistem sebesar [X]% dan menyelesaikan rilis fitur tepat waktu.`,
-        sections: [
-          {
-            heading: 'Pengalaman Profesional',
-            bullets: [
-              `Merancang dan memelihara layanan backend REST API menggunakan Node.js dan Express, meningkatkan kecepatan respons sebesar [X]% pada [jumlah] endpoint.`,
-              `Mengoptimalkan skema dan indexing database MySQL, memangkas latensi eksekusi query dari [waktu awal] menjadi [waktu akhir].`,
-              `Mengintegrasikan sistem autentikasi dan payment gateway yang aman untuk menangani lebih dari [jumlah] transaksi bulanan dengan uptime [X]%.`,
-              `Berkolaborasi dengan tim mobile dalam pengembangan modul antarmuka Flutter, mempercepat siklus rilis fitur sebesar [X]%.`,
-            ],
-          },
-          {
-            heading: 'Pendidikan',
-            bullets: [
-              'S1 Teknik Informatika — Universitas Indonesia (2019 – 2023) | IPK: [X.XX]/4.00',
-            ],
-          },
-          {
-            heading: 'Keahlian Teknis',
-            bullets: [
-              `Bahasa & Framework: Dart, Flutter, JavaScript (ES6+), Node.js, Express.js, SQL`,
-              'Database & Perangkat: MySQL, REST API, Git, Docker, Postman, Agile/Scrum',
-            ],
-          },
-        ],
-        changes: [
-          'Menghapus pas foto, Tempat/Tanggal Lahir (TTL), Agama, Status Pernikahan, dan NIK agar bebas bias dan ramah parser ATS.',
-          'Mengonversi kalimat tugas pasif ("Bertanggung jawab...") menjadi poin pencapaian aktif berpola STAR dalam Bahasa Indonesia.',
-          'Menambahkan penanda [placeholder] pada metrik angka yang perlu Anda isi dengan data riil proyek Anda (Kebijakan Anti-Fabrikasi).',
-        ],
-      },
-    };
+  // 4. Bucket lines into Experience, Education, and Skills from the actual CV text
+  const expBullets = [];
+  const eduBullets = [];
+  const skillBullets = [];
+  let currentBucket = 'summary';
+
+  const expHeadRx =
+    /^(pengalaman(\s+kerja|\s+profesional|\s+organisasi)?|riwayat\s+pekerjaan|work\s+experience|professional\s+experience|experience|employment|internship|magang|organisasi)$/i;
+  const eduHeadRx =
+    /^(pendidikan|riwayat\s+pendidikan|education|academic|kualifikasi\s+akademik|sertifikasi|certifications)$/i;
+  const skillHeadRx =
+    /^(keahlian|kemampuan|keterampilan|skills|technical\s+skills|core\s+competencies|kompetensi|tools|bahasa)$/i;
+  const summaryHeadRx =
+    /^(ringkasan(\s+profesional)?|tentang\s+saya|profil(\s+singkat)?|summary|executive\s+summary|profile|about\s+me|objective)$/i;
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    const cleanHeader = line.replace(/[:\-–—•*#]/g, '').trim();
+
+    if (summaryHeadRx.test(cleanHeader)) {
+      currentBucket = 'summary';
+      continue;
+    }
+    if (expHeadRx.test(cleanHeader)) {
+      currentBucket = 'exp';
+      continue;
+    }
+    if (eduHeadRx.test(cleanHeader)) {
+      currentBucket = 'edu';
+      continue;
+    }
+    if (skillHeadRx.test(cleanHeader)) {
+      currentBucket = 'skill';
+      continue;
+    }
+
+    // Skip contact lines
+    if (/@|\+62|08\d{6,}|linkedin\.com/i.test(line) && line.length < 75) {
+      continue;
+    }
+
+    const stripped = line.replace(/^[•\-*–—]\s*/, '').trim();
+    if (stripped.length < 4 || stripped === applicantTitle) continue;
+
+    if (currentBucket === 'edu' || /\b(universitas|institut|politeknik|sekolah\s+tinggi|sma|smk|s1|d3|d4|bachelor|university|diploma|ipk|gpa)\b/i.test(stripped)) {
+      if (eduBullets.length < 5) eduBullets.push(stripped);
+    } else if (currentBucket === 'skill') {
+      if (skillBullets.length < 6) skillBullets.push(stripped);
+    } else if (currentBucket === 'exp' || i > 2) {
+      if (expBullets.length < 8) {
+        expBullets.push(_upgradeBulletToStar(stripped, isId));
+      }
+    }
   }
+
+  // Ensure non-empty fallbacks if CV had unlabelled sections
+  if (expBullets.length === 0) {
+    for (const l of lines.slice(2, 8)) {
+      const s = l.replace(/^[•\-*]\s*/, '').trim();
+      if (s.length > 15) expBullets.push(_upgradeBulletToStar(s, isId));
+    }
+  }
+
+  if (eduBullets.length === 0) {
+    eduBullets.push(
+      isId
+        ? '[Gelar / Jurusan] — [Nama Universitas / Institusi] ([Tahun Lulus])'
+        : '[Degree / Major] — [University / Institution] ([Graduation Year])'
+    );
+  }
+
+  if (skillBullets.length === 0) {
+    skillBullets.push(
+      isId
+        ? `Kompetensi Utama: ${applicantTitle}, Manajemen Proyek, Komunikasi Profesional, Problem Solving`
+        : `Core Competencies: ${applicantTitle}, Project Execution, Cross-Functional Collaboration, Problem Solving`
+    );
+  }
+
+  const summaryText = isId
+    ? `Profesional di bidang ${applicantTitle} yang berorientasi pada hasil dengan rekam jejak dalam meningkatkan efisiensi operasional dan kualitas kerja. Terbukti mampu beradaptasi cepat, berkolaborasi lintas fungsi, dan mencapai target terukur sebesar [X]% secara konsisten.`
+    : `Results-driven ${applicantTitle} with a proven track record of executing high-impact initiatives and optimizing operational workflows. Adept at cross-functional collaboration and delivering measurable improvements of [X]% against key performance targets.`;
 
   return {
     cv: {
-      language: 'en',
+      language: isId ? 'id' : 'en',
       name: applicantName,
-      title: role,
+      title: applicantTitle,
       contact,
-      summary: `Results-oriented ${role} with hands-on expertise in delivering robust, high-performance applications. Proven track record in collaborating with agile teams to optimize workflows, improve system reliability by [X]%, and deliver high-impact features.`,
+      summary: summaryText,
       sections: [
         {
-          heading: 'Professional Experience',
-          bullets: [
-            `Spearheaded the development and maintenance of core ${role} services, improving execution speed by [X]%.`,
-            `Optimized MySQL database indexing and connection pooling, cutting query latency from [initial ms] to [target ms].`,
-            `Collaborated with cross-functional product and engineering teams to ship [number] major feature releases on schedule.`,
-            `Engineered automated tests and CI/CD checks, achieving [X]% test coverage across production modules.`,
-          ],
+          heading: isId ? 'Pengalaman Profesional' : 'Professional Experience',
+          bullets: expBullets,
         },
         {
-          heading: 'Education',
-          bullets: [
-            'B.S. in Computer Science — Universitas Indonesia (2019 – 2023) | GPA: [X.XX]/4.00',
-          ],
+          heading: isId ? 'Pendidikan' : 'Education',
+          bullets: eduBullets,
         },
         {
-          heading: 'Technical Skills',
-          bullets: [
-            `Languages & Frameworks: Dart, Flutter, JavaScript (ES6+), Node.js, Express.js, SQL`,
-            'Databases & DevOps: MySQL, RESTful APIs, Git, Docker, CI/CD, Agile/Scrum',
-          ],
+          heading: isId ? 'Keahlian & Kompetensi' : 'Skills & Competencies',
+          bullets: skillBullets,
         },
       ],
-      changes: [
-        'Removed photo, Date of Birth, Religion, Marital Status, and National ID to comply with global EEOC anti-bias standards.',
-        'Transformed passive duty descriptions into action-driven English STAR achievement bullets.',
-        'Inserted bracketed [placeholder] markers for metrics you must fill with your real project numbers (Zero-Hallucination Policy).',
-      ],
+      changes: isId
+        ? [
+            'Menghapus data pribadi sensitif (pas foto, TTL, agama, status pernikahan, NIK) agar bebas bias dan lolos filter ATS.',
+            'Mengonversi poin pengalaman asli Anda menjadi kalimat aktif berpola STAR dengan penanda metrik [X]%.',
+            'Menyusun ulang struktur dokumen ke dalam format satu kolom bersih yang siap diunduh sebagai PDF.',
+          ]
+        : [
+            'Removed sensitive demographic fields (photo, DOB, religion, marital status) for global ATS compliance.',
+            'Upgraded your original experience bullets into action-driven STAR statements with [X]% metric placeholders.',
+            'Formatted resume into a clean single-column layout ready for direct PDF download.',
+          ],
     },
   };
+}
+
+function _upgradeBulletToStar(line, isId) {
+  let out = line;
+  if (isId) {
+    out = out
+      .replace(/^bertanggung\s+jawab\s+(dalam\s+|untuk\s+|atas\s+)?/i, 'Mengelola dan mengoptimalkan ')
+      .replace(/^membantu\s+/i, 'Berkolaborasi aktif dalam ')
+      .replace(/^melakukan\s+/i, 'Mengeksekusi ');
+    const hasMetric = /\d+%|\b\d+\s+(orang|klien|pelanggan|proyek|dokumen|data|hari|bulan)\b|\[.+\]/i.test(out);
+    if (!hasMetric && out.length > 25) {
+      out = out.replace(/\.$/, '') + ', meningkatkan efektivitas kerja sebesar [X]%.';
+    }
+  } else {
+    out = out
+      .replace(/^responsible\s+for\s+/i, 'Spearheaded and optimized ')
+      .replace(/^assisted\s+(in|with)\s+/i, 'Collaborated in executing ')
+      .replace(/^worked\s+on\s+/i, 'Engineered and delivered ');
+    const hasMetric = /\d+%|\b\d+\+?\s+(users|clients|projects|endpoints|members)\b|\[.+\]/i.test(out);
+    if (!hasMetric && out.length > 25) {
+      out = out.replace(/\.$/, '') + ', improving overall efficiency by [X]%.';
+    }
+  }
+  return out.charAt(0).toUpperCase() + out.slice(1);
 }
 
 /**

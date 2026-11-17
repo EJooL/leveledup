@@ -1,5 +1,6 @@
 const mysql = require('mysql2/promise');
 const dotenv = require('dotenv');
+const initDatabase = require('../sql/initDb');
 
 dotenv.config();
 
@@ -16,14 +17,21 @@ const pool = mysql.createPool({
   keepAliveInitialDelay: 10000,
 });
 
-// Helper function to test connection
+// Helper function to test connection (and auto-create leveledup_db if missing)
 async function testConnection() {
   try {
     const connection = await pool.getConnection();
-    console.log(`[Database] Connected successfully to MySQL database "${process.env.DB_NAME || 'leveledup_db'}" on ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '3306'}`);
+    console.log(
+      `[Database] Connected successfully to MySQL database "${process.env.DB_NAME || 'leveledup_db'}" on ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '3306'}`
+    );
     connection.release();
     return true;
   } catch (error) {
+    if (error.code === 'ER_BAD_DB_ERROR') {
+      console.log('[Database] Database "leveledup_db" not found. Running auto-initialization...');
+      await initDatabase();
+      return true;
+    }
     console.warn(`[Database Warning] Could not connect to MySQL: ${error.message}`);
     console.warn(`[Database Warning] Please ensure MySQL is running and check your .env credentials.`);
     return false;
@@ -34,4 +42,3 @@ module.exports = {
   pool,
   testConnection,
 };
-

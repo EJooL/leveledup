@@ -1,16 +1,18 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:share_plus/share_plus.dart';
 import '../../models/cv_analysis_model.dart';
+import 'pdf_saver_stub.dart'
+    if (dart.library.html) 'pdf_saver_web.dart'
+    if (dart.library.io) 'pdf_saver_io.dart';
 
-/// Pure-Dart ATS-Compliant PDF 1.4 Document Compiler & Exporter.
-/// Generates a real, single-column, selectable-text PDF resume (using standard
-/// Type 1 Helvetica & Helvetica-Bold fonts) and triggers a direct .pdf download/share.
+/// Pure-Dart ATS-Compliant PDF 1.4 Document Compiler & Local File Saver.
+/// Generates a real, single-column, selectable-text PDF resume and saves it
+/// directly to the user's local laptop (Downloads folder) without opening the Share dialog.
 class PdfCvGenerator {
   PdfCvGenerator._();
 
-  /// Generates a binary .pdf file from [ImprovedCV] and triggers download / share
-  static Future<void> exportAndDownloadPdf(ImprovedCV cv) async {
+  /// Generates a binary .pdf file from [ImprovedCV] and saves it directly to local laptop storage
+  static Future<String> exportAndDownloadPdf(ImprovedCV cv) async {
     final pdfBytes = buildPdfBytes(cv);
     final sanitizedName = cv.name
         .replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_')
@@ -19,16 +21,7 @@ class PdfCvGenerator {
     final fileName =
         '${sanitizedName.isEmpty ? "Candidate" : sanitizedName}_ATS_CV_$langSuffix.pdf';
 
-    final xFile = XFile.fromData(
-      pdfBytes,
-      name: fileName,
-      mimeType: 'application/pdf',
-    );
-
-    await Share.shareXFiles(
-      [xFile],
-      subject: '${cv.name} - ATS Optimized CV ($langSuffix)',
-    );
+    return savePdfFileLocally(pdfBytes, fileName);
   }
 
   /// Compiles a standard single-column ATS PDF 1.4 binary document
@@ -227,7 +220,6 @@ class PdfCvGenerator {
   }
 
   static String _escapePdfString(String input) {
-    // Strip any non-WinAnsi characters and escape PDF parentheses/backslashes
     final buffer = StringBuffer();
     for (final codeUnit in input.codeUnits) {
       if (codeUnit >= 32 && codeUnit <= 126) {
@@ -244,4 +236,3 @@ class PdfCvGenerator {
     return buffer.toString();
   }
 }
-
