@@ -11,21 +11,43 @@ class CareerIcons {
   static IconData forQuest(CareerQuest quest) {
     switch (quest.id) {
       case 'q_scan_cv':
+      case 'q_first_scan':
         return Icons.document_scanner_rounded;
       case 'q_remove_bias':
+      case 'q_purge_bias':
         return Icons.privacy_tip_rounded;
       case 'q_star_rewrite':
+      case 'q_fix_duties':
         return Icons.auto_awesome_rounded;
+      case 'q_fix_no_metrics':
+        return Icons.analytics_rounded;
+      case 'q_fix_missing_keywords':
+        return Icons.key_rounded;
+      case 'q_fix_cliche_words':
+        return Icons.spellcheck_rounded;
+      case 'q_fix_too_short':
+        return Icons.subject_rounded;
       case 'q_github_pins':
-        return Icons.terminal_rounded;
+      case 'q_self_portfolio':
+        return Icons.folder_special_rounded;
       case 'q_linkedin_opt':
+      case 'q_self_linkedin':
         return Icons.badge_rounded;
       case 'q_send_5_apps':
+      case 'q_self_applications':
         return Icons.rocket_launch_rounded;
       case 'q_first_pr':
-        return Icons.merge_type_rounded;
+      case 'hired_first_deliverable':
+        return Icons.assignment_turned_in_rounded;
       case 'q_manager_1on1':
+      case 'hired_align_goals':
         return Icons.track_changes_rounded;
+      case 'hired_log_first_win':
+        return Icons.emoji_events_rounded;
+      case 'hired_merge_win_cv':
+        return Icons.picture_as_pdf_rounded;
+      case 'hired_30day_feedback':
+        return Icons.forum_rounded;
       case 'q_onboarding_doc':
         return Icons.menu_book_rounded;
       case 'q_perf_opt':
@@ -103,7 +125,11 @@ class CareerIcons {
         return Icons.diversity_3_rounded;
     }
 
-    switch (skill.branch) {
+    return forBranch(skill.branch);
+  }
+
+  static IconData forBranch(SkillBranch branch) {
+    switch (branch) {
       case SkillBranch.technical:
         return Icons.code_rounded;
       case SkillBranch.architecture:
@@ -117,7 +143,11 @@ class CareerIcons {
 
   static Color forSkillAccent(SkillNode skill) {
     if (skill.isMaxed) return AppColors.emerald;
-    switch (skill.branch) {
+    return forBranchAccent(skill.branch);
+  }
+
+  static Color forBranchAccent(SkillBranch branch) {
+    switch (branch) {
       case SkillBranch.technical:
         return AppColors.terracottaBright;
       case SkillBranch.architecture:

@@ -30,6 +30,14 @@ const ROLE_KEYWORDS = {
     'SQL', 'Python', 'Tableau', 'Power BI', 'Data Cleaning',
     'Statistical Analysis', 'Excel', 'Data Visualization', 'ETL', 'Business Intelligence'
   ],
+  'Digital Marketing Specialist': [
+    'SEO', 'SEM', 'Google Analytics', 'Meta Ads', 'Content Strategy',
+    'Copywriting', 'Conversion Rate Optimization', 'Social Media Marketing', 'Email Marketing', 'Campaign Analytics'
+  ],
+  'Accounting & Finance Associate': [
+    'Financial Reporting', 'General Ledger', 'Tax Compliance', 'Account Reconciliation', 'Budgeting',
+    'SAP / Accurate', 'Auditing', 'Financial Modeling', 'Cost Analysis', 'Excel Pivot / VLOOKUP'
+  ],
   'Product Manager': [
     'User Research', 'Product Roadmap', 'A/B Testing', 'Agile/Scrum', 'KPI Tracking',
     'Wireframing', 'Stakeholder Management', 'Sprint Planning', 'Data Analytics', 'PRD'
@@ -37,6 +45,10 @@ const ROLE_KEYWORDS = {
   'UI/UX Designer': [
     'Figma', 'User Research', 'Wireframing', 'Prototyping', 'Design Systems',
     'Usability Testing', 'Information Architecture', 'Interaction Design', 'Accessibility', 'User Journey'
+  ],
+  'Human Resources & People Ops': [
+    'Talent Acquisition', 'End-to-End Recruitment', 'Onboarding', 'Employee Relations', 'HRIS',
+    'Performance Appraisal', 'Employer Branding', 'Training & Development', 'Labor Law Compliance', 'Behavioral Interviewing'
   ],
 };
 
@@ -401,10 +413,90 @@ function analyzeWithRules(text, fileName = 'CV.pdf', options = {}) {
   };
 }
 
+/**
+ * Build role-agnostic, bilingual ('id' or 'en') Skill Gap action items from missing keywords.
+ * Replaces the old RPG Skill Tree with concrete CV & portfolio actions per gap.
+ * @param {string} jobTitle
+ * @param {string[]} missingKeywords
+ * @param {string[]} matchedKeywords
+ * @param {'id' | 'en'} language
+ */
+function buildSkillGapActions(jobTitle, missingKeywords = [], matchedKeywords = [], language = 'en') {
+  const isId = language === 'id';
+  const role = jobTitle || 'Professional';
+  const defaultMissing = ROLE_KEYWORDS[role]
+    ? ROLE_KEYWORDS[role].filter((k) => !matchedKeywords.includes(k))
+    : [];
+  const gapsSource = Array.isArray(missingKeywords) && missingKeywords.length > 0
+    ? missingKeywords
+    : defaultMissing;
+
+  const gaps = gapsSource.map((kw, index) => {
+    const modeIndex = index % 3;
+    let actionType = 'experience_bullet';
+    let actionTitle = '';
+    let concreteAction = '';
+    let sampleBullet = '';
+
+    if (modeIndex === 0) {
+      actionType = 'experience_bullet';
+      actionTitle = isId
+        ? `Tunjukkan bukti penggunaan ${kw} pada pengalaman/magang`
+        : `Reframe an internship or work bullet to highlight ${kw}`;
+      concreteAction = isId
+        ? `Jika Anda pernah menggunakan ${kw} saat kuliah, magang, atau proyek tim, sebutkan nama kompetensinya secara eksplisit di bagian Pengalaman.`
+        : `If you used ${kw} during an internship, thesis, or team project, name "${kw}" explicitly inside an experience bullet so ATS parsers match it.`;
+      sampleBullet = isId
+        ? `Menerapkan ${kw} untuk mengoptimalkan alur kerja [nama proyek/divisi], meningkatkan akurasi dan efisiensi proses sebesar [X]%.`
+        : `Applied ${kw} across [project or department workflow], improving operational accuracy and delivery speed by [X]%.`;
+    } else if (modeIndex === 1) {
+      actionType = 'portfolio_project';
+      actionTitle = isId
+        ? `Buat 1 studi kasus atau proyek mini berbasis ${kw}`
+        : `Add a mini project or case study demonstrating ${kw}`;
+      concreteAction = isId
+        ? `Tambahkan 1 poin proyek portofolio (tugas akhir, studi kasus bisnis, atau eksperimen mandiri) yang menggunakan ${kw} beserta dampaknya.`
+        : `Add a capstone, coursework, or self-initiated case study section entry where ${kw} was used to solve a real problem.`;
+      sampleBullet = isId
+        ? `Merancang studi kasus ${role} menggunakan ${kw} untuk menganalisis [jumlah] sampel data/skenario dan menghasilkan rekomendasi dengan dampak [X]%.`
+        : `Designed a ${role} case study leveraging ${kw} across [number] test scenarios, achieving a [X]% improvement in [target metric].`;
+    } else {
+      actionType = 'skills_section';
+      actionTitle = isId
+        ? `Cantumkan ${kw} pada bagian Keahlian & Perangkat`
+        : `List ${kw} in your Skills & Competencies section`;
+      concreteAction = isId
+        ? `Kelompokkan ${kw} bersama keahlian utama Anda di bagian Keahlian Teknis/Kompetensi agar lolos filter kata kunci tahap awal.`
+        : `Group ${kw} alongside your existing competencies (${matchedKeywords.slice(0, 2).join(', ') || role}) in your Skills section.`;
+      sampleBullet = isId
+        ? `Kompetensi & Perangkat: ${[...matchedKeywords.slice(0, 3), kw].join(', ')}`
+        : `Core Competencies & Tools: ${[...matchedKeywords.slice(0, 3), kw].join(', ')}`;
+    }
+
+    return {
+      keyword: kw,
+      role,
+      actionType,
+      actionTitle,
+      concreteAction,
+      sampleBullet,
+    };
+  });
+
+  return {
+    jobTitle: role,
+    language: isId ? 'id' : 'en',
+    matchedKeywords,
+    missingKeywords: gapsSource,
+    gaps,
+  };
+}
+
 module.exports = {
   analyzeWithRules,
   detectCvLanguage,
   inferJobRole,
   analyzeKeywords,
+  buildSkillGapActions,
   ROLE_KEYWORDS,
 };

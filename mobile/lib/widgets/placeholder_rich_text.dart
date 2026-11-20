@@ -6,15 +6,23 @@ import '../core/theme/app_colors.dart';
 class PlaceholderRichText extends StatelessWidget {
   final String text;
   final double fontSize;
+  final TextStyle? baseStyle;
 
   const PlaceholderRichText({
     super.key,
     required this.text,
     this.fontSize = 13.5,
+    this.baseStyle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveStyle = baseStyle ??
+        TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: fontSize,
+          height: 1.5,
+        );
     final regex = RegExp(r'\[[^\]]+\]');
     final spans = <InlineSpan>[];
     var lastMatchEnd = 0;
@@ -24,11 +32,7 @@ class PlaceholderRichText extends StatelessWidget {
         spans.add(
           TextSpan(
             text: text.substring(lastMatchEnd, match.start),
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: fontSize,
-              height: 1.5,
-            ),
+            style: effectiveStyle,
           ),
         );
       }
@@ -51,7 +55,7 @@ class PlaceholderRichText extends StatelessWidget {
               placeholderText,
               style: TextStyle(
                 color: AppColors.accentGoldBright,
-                fontSize: fontSize - 1,
+                fontSize: (effectiveStyle.fontSize ?? fontSize) - 1,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -66,11 +70,7 @@ class PlaceholderRichText extends StatelessWidget {
       spans.add(
         TextSpan(
           text: text.substring(lastMatchEnd),
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: fontSize,
-            height: 1.5,
-          ),
+          style: effectiveStyle,
         ),
       );
     }

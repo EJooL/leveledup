@@ -108,12 +108,10 @@ class CvScanNotifier extends StateNotifier<CvScanState> {
         analysisResult: analyzed.result,
       );
 
-      // Award +75 XP & unlock "ATS Challenger" badge in Career Companion
-      _ref.read(careerProvider.notifier).recordAtsMilestone(
-            atsScore: analyzed.result.overallScore,
-            questIdToComplete: 'q_scan_cv',
-            badgeIdToUnlock: 'b_ats_scanned',
-            bonusXp: 75,
+      // Sync scan result with Score History, scan-verified quests & Skill Gap
+      await _ref.read(careerProvider.notifier).recordScanResult(
+            analyzed.result,
+            scanToken: analyzed.scanToken,
           );
     } catch (e) {
       state = state.copyWith(
@@ -150,11 +148,9 @@ class CvScanNotifier extends StateNotifier<CvScanState> {
         analysisResult: analyzed.result,
       );
 
-      _ref.read(careerProvider.notifier).recordAtsMilestone(
-            atsScore: analyzed.result.overallScore,
-            questIdToComplete: 'q_scan_cv',
-            badgeIdToUnlock: 'b_ats_scanned',
-            bonusXp: 75,
+      await _ref.read(careerProvider.notifier).recordScanResult(
+            analyzed.result,
+            scanToken: analyzed.scanToken,
           );
     } catch (e) {
       state = state.copyWith(
@@ -183,10 +179,11 @@ class CvScanNotifier extends StateNotifier<CvScanState> {
         unlockedCodeUsed: accessCode.trim().toUpperCase(),
       );
 
-      // Award +120 XP & unlock "Zero-Bias Architect" badge
-      _ref.read(careerProvider.notifier).recordAtsMilestone(
-            badgeIdToUnlock: 'b_vip_unlocked',
-            bonusXp: 120,
+      // Sync unlocked missing keywords with Skill Gap & unlock badge
+      await _ref.read(careerProvider.notifier).recordScanResult(
+            unlockedResult,
+            scanToken: state.scanToken,
+            isUnlockAction: true,
           );
       return true;
     } catch (e) {
@@ -217,18 +214,18 @@ class CvScanNotifier extends StateNotifier<CvScanState> {
         rewrittenCv: rewritten,
       );
 
-      // Award +150 XP & complete STAR Rewrite quest
-      _ref.read(careerProvider.notifier).recordAtsMilestone(
-            questIdToComplete: 'q_star_rewrite',
-            badgeIdToUnlock: 'b_cv_rewritten',
-            bonusXp: 150,
-          );
+      // Save rewritten CV as base living CV & unlock STAR Storyteller toast badge
+      _ref.read(careerProvider.notifier).setLatestRewrittenCv(rewritten);
     } catch (e) {
       state = state.copyWith(
         step: ScanStep.completed,
         errorMessage: e.toString().replaceFirst('Exception: ', ''),
       );
     }
+  }
+
+  void updateRewrittenCvFromWins(ImprovedCV updatedCv) {
+    state = state.copyWith(rewrittenCv: updatedCv);
   }
 
   void resetScanner() {

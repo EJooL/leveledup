@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/api_constants.dart';
+import '../../models/career_companion_model.dart';
 import '../../models/cv_analysis_model.dart';
 
 class ParseResponseData {
@@ -32,6 +34,9 @@ class AnalyzeResponseData {
 }
 
 class ApiClient {
+  static const String _deviceIdPrefKey = 'leveledup_device_id';
+  static String? _cachedDeviceId;
+
   late final Dio _dio;
 
   ApiClient() {
@@ -44,6 +49,209 @@ class ApiClient {
           'Accept': 'application/json',
         },
       ),
+    );
+  }
+
+  /// Resolves a stable device-scoped identity persisted in SharedPreferences
+  Future<String> getDeviceId() async {
+    if (_cachedDeviceId != null && _cachedDeviceId!.isNotEmpty) {
+      return _cachedDeviceId!;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = prefs.getString(_deviceIdPrefKey);
+      if (existing != null && existing.trim().isNotEmpty) {
+        _cachedDeviceId = existing.trim();
+        return _cachedDeviceId!;
+      }
+      final generated = 'ag_dev_${DateTime.now().millisecondsSinceEpoch}';
+      await prefs.setString(_deviceIdPrefKey, generated);
+      _cachedDeviceId = generated;
+      return generated;
+    } catch (_) {
+      _cachedDeviceId ??= 'ag_dev_fallback';
+      return _cachedDeviceId!;
+    }
+  }
+
+  /// Role-agnostic keyword catalog across diverse Indonesian fresh-graduate fields
+  static const Map<String, List<String>> roleKeywordsCatalog = {
+    'Software Engineer': [
+      'Git',
+      'CI/CD',
+      'REST API',
+      'Unit Testing',
+      'System Architecture',
+      'Docker',
+      'Agile/Scrum',
+      'Data Structures',
+      'Microservices',
+      'Code Review',
+    ],
+    'Mobile Developer': [
+      'Flutter',
+      'Dart',
+      'Android',
+      'iOS',
+      'State Management',
+      'REST API',
+      'Git',
+      'Firebase',
+      'Clean Architecture',
+      'Mobile UI/UX',
+    ],
+    'Data Analyst': [
+      'SQL',
+      'Python',
+      'Tableau',
+      'Power BI',
+      'Data Cleaning',
+      'Statistical Analysis',
+      'Excel',
+      'Data Visualization',
+      'ETL',
+      'Business Intelligence',
+    ],
+    'Digital Marketing Specialist': [
+      'SEO',
+      'SEM',
+      'Google Analytics',
+      'Meta Ads',
+      'Content Strategy',
+      'Copywriting',
+      'Conversion Rate Optimization',
+      'Social Media Marketing',
+      'Email Marketing',
+      'Campaign Analytics',
+    ],
+    'Accounting & Finance Associate': [
+      'Financial Reporting',
+      'General Ledger',
+      'Tax Compliance',
+      'Account Reconciliation',
+      'Budgeting',
+      'SAP / Accurate',
+      'Auditing',
+      'Financial Modeling',
+      'Cost Analysis',
+      'Excel Pivot / VLOOKUP',
+    ],
+    'UI/UX Designer': [
+      'Figma',
+      'User Research',
+      'Wireframing',
+      'Prototyping',
+      'Design Systems',
+      'Usability Testing',
+      'Information Architecture',
+      'Interaction Design',
+      'Accessibility',
+      'User Journey',
+    ],
+    'Product Manager': [
+      'User Research',
+      'Product Roadmap',
+      'A/B Testing',
+      'Agile/Scrum',
+      'KPI Tracking',
+      'Wireframing',
+      'Stakeholder Management',
+      'Sprint Planning',
+      'Data Analytics',
+      'PRD',
+    ],
+    'Human Resources & People Ops': [
+      'Talent Acquisition',
+      'End-to-End Recruitment',
+      'Onboarding',
+      'Employee Relations',
+      'HRIS',
+      'Performance Appraisal',
+      'Employer Branding',
+      'Training & Development',
+      'Labor Law Compliance',
+      'Behavioral Interviewing',
+    ],
+  };
+
+  /// Build role-agnostic, bilingual ('id' or 'en') Skill Gap actions from scan data
+  static SkillGapReport buildSkillGapReport({
+    required String jobTitle,
+    required List<String> missingKeywords,
+    required List<String> matchedKeywords,
+    String language = 'en',
+  }) {
+    final isId = language == 'id';
+    final role = jobTitle.trim().isEmpty ? 'Professional' : jobTitle.trim();
+    final catalog =
+        roleKeywordsCatalog[role] ?? roleKeywordsCatalog['Software Engineer']!;
+    final effectiveMissing = missingKeywords.isNotEmpty
+        ? missingKeywords
+        : catalog.where((k) => !matchedKeywords.contains(k)).take(5).toList();
+
+    final gaps = <SkillGapItem>[];
+    for (var i = 0; i < effectiveMissing.length; i++) {
+      final kw = effectiveMissing[i];
+      final modeIndex = i % 3;
+      late final String actionType;
+      late final String actionTitle;
+      late final String concreteAction;
+      late final String sampleBullet;
+
+      if (modeIndex == 0) {
+        actionType = 'experience_bullet';
+        actionTitle = isId
+            ? 'Tunjukkan bukti penggunaan $kw pada pengalaman/magang'
+            : 'Reframe an internship or work bullet to highlight $kw';
+        concreteAction = isId
+            ? 'Jika Anda pernah menggunakan $kw saat kuliah, magang, atau proyek tim, sebutkan nama kompetensinya secara eksplisit di bagian Pengalaman.'
+            : 'If you used $kw during an internship, thesis, or team project, name "$kw" explicitly inside an experience bullet so ATS parsers match it.';
+        sampleBullet = isId
+            ? 'Menerapkan $kw untuk mengoptimalkan alur kerja [nama proyek/divisi], meningkatkan akurasi dan efisiensi proses sebesar [X]%.'
+            : 'Applied $kw across [project or department workflow], improving operational accuracy and delivery speed by [X]%.';
+      } else if (modeIndex == 1) {
+        actionType = 'portfolio_project';
+        actionTitle = isId
+            ? 'Buat 1 studi kasus atau proyek mini berbasis $kw'
+            : 'Add a mini project or case study demonstrating $kw';
+        concreteAction = isId
+            ? 'Tambahkan 1 poin proyek portofolio (tugas akhir, studi kasus bisnis, atau eksperimen mandiri) yang menggunakan $kw beserta dampaknya.'
+            : 'Add a capstone, coursework, or self-initiated case study entry where $kw was used to solve a concrete problem.';
+        sampleBullet = isId
+            ? 'Merancang studi kasus $role menggunakan $kw untuk menganalisis [jumlah] sampel data/skenario dan menghasilkan rekomendasi dengan dampak [X]%.'
+            : 'Designed a $role case study leveraging $kw across [number] test scenarios, achieving a [X]% improvement in [target metric].';
+      } else {
+        actionType = 'skills_section';
+        actionTitle = isId
+            ? 'Cantumkan $kw pada bagian Keahlian & Perangkat'
+            : 'List $kw in your Skills & Competencies section';
+        concreteAction = isId
+            ? 'Kelompokkan $kw bersama keahlian utama Anda di bagian Keahlian/Kompetensi agar lolos filter kata kunci tahap awal.'
+            : 'Group $kw alongside your existing competencies (${matchedKeywords.take(2).join(', ').isEmpty ? role : matchedKeywords.take(2).join(', ')}) in your Skills section.';
+        final combined = [...matchedKeywords.take(3), kw].join(', ');
+        sampleBullet = isId
+            ? 'Kompetensi & Perangkat: $combined'
+            : 'Core Competencies & Tools: $combined';
+      }
+
+      gaps.add(
+        SkillGapItem(
+          keyword: kw,
+          role: role,
+          actionType: actionType,
+          actionTitle: actionTitle,
+          concreteAction: concreteAction,
+          sampleBullet: sampleBullet,
+        ),
+      );
+    }
+
+    return SkillGapReport(
+      jobTitle: role,
+      language: isId ? 'id' : 'en',
+      matchedKeywords: matchedKeywords,
+      missingKeywords: effectiveMissing,
+      gaps: gaps,
     );
   }
 
@@ -66,6 +274,9 @@ class ApiClient {
       RegExp(r'\bpekerja\s+keras\b'),
       RegExp(r'\bmembantu\b'),
       RegExp(r'\bmengelola\b'),
+      RegExp(r'\bmeningkatkan\b'),
+      RegExp(r'\bkampanye\b'),
+      RegExp(r'\blaporan\b'),
     ];
     final enMarkers = [
       RegExp(r'\bexperience\b'),
@@ -100,6 +311,7 @@ class ApiClient {
     required String fileName,
   }) async {
     try {
+      final deviceId = await getDeviceId();
       final formData = FormData.fromMap({
         'file': MultipartFile.fromBytes(
           bytes,
@@ -111,19 +323,23 @@ class ApiClient {
       final response = await _dio.post(
         ApiConstants.parseEndpoint,
         data: formData,
+        options: Options(headers: {'x-device-id': deviceId}),
       );
 
       final data = response.data as Map<String, dynamic>;
       return ParseResponseData(
         fileName: data['fileName']?.toString() ?? fileName,
-        numPages: (data['numPages'] is num) ? (data['numPages'] as num).toInt() : 1,
-        numChars: (data['numChars'] is num) ? (data['numChars'] as num).toInt() : 0,
+        numPages:
+            (data['numPages'] is num) ? (data['numPages'] as num).toInt() : 1,
+        numChars:
+            (data['numChars'] is num) ? (data['numChars'] as num).toInt() : 0,
         hasPhoto: data['hasPhoto'] == true,
         text: data['text']?.toString() ?? '',
       );
     } on DioException catch (e) {
       if (e.response != null && e.response?.data is Map) {
-        final msg = (e.response?.data as Map)['error']?.toString() ?? 'Failed to parse PDF.';
+        final msg = (e.response?.data as Map)['error']?.toString() ??
+            'Failed to parse PDF.';
         throw Exception(msg);
       }
       throw Exception(
@@ -137,8 +353,9 @@ class ApiClient {
     required String text,
     required String fileName,
     bool hasPhoto = false,
-    String deviceId = 'flutter-mobile-client',
+    String? deviceId,
   }) async {
+    final resolvedDeviceId = deviceId ?? await getDeviceId();
     try {
       final response = await _dio.post(
         ApiConstants.analyzeEndpoint,
@@ -146,8 +363,9 @@ class ApiClient {
           'text': text,
           'fileName': fileName,
           'hasPhoto': hasPhoto,
-          'deviceId': deviceId,
+          'deviceId': resolvedDeviceId,
         },
+        options: Options(headers: {'x-device-id': resolvedDeviceId}),
       );
 
       final data = response.data as Map<String, dynamic>;
@@ -163,7 +381,8 @@ class ApiClient {
       );
     } on DioException catch (e) {
       if (e.response != null && e.response?.data is Map) {
-        final msg = (e.response?.data as Map)['error']?.toString() ?? 'Failed to analyze CV.';
+        final msg = (e.response?.data as Map)['error']?.toString() ??
+            'Failed to analyze CV.';
         throw Exception(msg);
       }
       return _buildOfflineAnalysis(
@@ -184,6 +403,7 @@ class ApiClient {
     required String fileName,
   }) async {
     try {
+      final deviceId = await getDeviceId();
       final response = await _dio.post(
         ApiConstants.unlockEndpoint,
         data: {
@@ -191,6 +411,7 @@ class ApiClient {
           'token': encryptedToken,
           'code': accessCode.trim().toUpperCase(),
         },
+        options: Options(headers: {'x-device-id': deviceId}),
       );
 
       final data = response.data as Map<String, dynamic>;
@@ -198,11 +419,14 @@ class ApiClient {
       return AnalysisResult.fromJson(data, unlocked: true);
     } on DioException catch (e) {
       if (e.response != null && e.response?.data is Map) {
-        final msg = (e.response?.data as Map)['error']?.toString() ?? 'Invalid access code.';
+        final msg = (e.response?.data as Map)['error']?.toString() ??
+            'Invalid access code.';
         throw Exception(msg);
       }
       if (accessCode.trim().toUpperCase() != ApiConstants.defaultVipCode) {
-        throw Exception('Invalid access code. Try ${ApiConstants.defaultVipCode} for MVP testing.');
+        throw Exception(
+          'Invalid access code. Try ${ApiConstants.defaultVipCode} for MVP testing.',
+        );
       }
       return _buildOfflineAnalysis(
         text: currentText,
@@ -220,6 +444,7 @@ class ApiClient {
     required String fileName,
   }) async {
     try {
+      final deviceId = await getDeviceId();
       final response = await _dio.post(
         ApiConstants.rewriteEndpoint,
         data: {
@@ -228,6 +453,7 @@ class ApiClient {
           'code': accessCode.trim().toUpperCase(),
           'fileName': fileName,
         },
+        options: Options(headers: {'x-device-id': deviceId}),
       );
 
       final data = response.data as Map<String, dynamic>;
@@ -236,11 +462,268 @@ class ApiClient {
       return ImprovedCV.fromJson(cvJson);
     } on DioException catch (e) {
       if (e.response != null && e.response?.data is Map) {
-        final msg = (e.response?.data as Map)['error']?.toString() ?? 'Failed to rewrite CV.';
+        final msg = (e.response?.data as Map)['error']?.toString() ??
+            'Failed to rewrite CV.';
         throw Exception(msg);
       }
       return _buildOfflineRewrite(text);
     }
+  }
+
+  /// 5. GET /api/wins — Fetch persisted Brag Doc wins & 90-day reminder status
+  Future<Map<String, dynamic>?> fetchWins({bool simulateReminder = false}) async {
+    try {
+      final deviceId = await getDeviceId();
+      final response = await _dio.get(
+        ApiConstants.winsEndpoint,
+        queryParameters: {
+          'deviceId': deviceId,
+          if (simulateReminder) 'simulateReminder': 'true',
+        },
+        options: Options(headers: {'x-device-id': deviceId}),
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 6. POST /api/wins — Log a work win & generate Zero-Hallucination STAR bullet
+  Future<Map<String, dynamic>?> createWorkWin({
+    required String title,
+    required String impactMetric,
+    required String category,
+    String? language,
+  }) async {
+    try {
+      final deviceId = await getDeviceId();
+      final response = await _dio.post(
+        ApiConstants.winsEndpoint,
+        data: {
+          'deviceId': deviceId,
+          'title': title,
+          'impactMetric': impactMetric,
+          'category': category,
+          if (language != null) 'language': language,
+        },
+        options: Options(headers: {'x-device-id': deviceId}),
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 7. POST /api/wins/merge-cv — Merge selected wins into living CV
+  Future<ImprovedCV> mergeWinsIntoCv({
+    required List<WorkWin> winsToMerge,
+    String? scanToken,
+    ImprovedCV? baseCv,
+  }) async {
+    final lang = baseCv?.language ??
+        (winsToMerge.isNotEmpty ? winsToMerge.first.language : 'en');
+    try {
+      final deviceId = await getDeviceId();
+      final response = await _dio.post(
+        ApiConstants.mergeWinsCvEndpoint,
+        data: {
+          'deviceId': deviceId,
+          'winIds': winsToMerge.map((w) => w.id).toList(),
+          'winBullets': winsToMerge
+              .map(
+                (w) => {
+                  'id': w.id,
+                  'title': w.title,
+                  'starBullet': w.toStarBullet(),
+                  'language': w.language,
+                },
+              )
+              .toList(),
+          'scanToken': scanToken,
+          'language': lang,
+          if (baseCv != null)
+            'cv': {
+              'language': baseCv.language,
+              'name': baseCv.name,
+              'title': baseCv.title,
+              'contact': baseCv.contact,
+              'summary': baseCv.summary,
+              'sections': baseCv.sections.map((s) => s.toJson()).toList(),
+              'changes': baseCv.changes,
+            },
+        },
+        options: Options(headers: {'x-device-id': deviceId}),
+      );
+
+      final data = response.data as Map<String, dynamic>;
+      final cvJson = data['cv'] as Map<String, dynamic>;
+      return ImprovedCV.fromJson(cvJson);
+    } catch (_) {
+      return mergeWinsLocally(
+        baseCv: baseCv ?? _buildOfflineRewrite(ApiConstants.sampleCvText),
+        winsToMerge: winsToMerge,
+      );
+    }
+  }
+
+  /// Local deterministic living-CV merger (fallback if offline)
+  static ImprovedCV mergeWinsLocally({
+    required ImprovedCV baseCv,
+    required List<WorkWin> winsToMerge,
+  }) {
+    final isId = baseCv.isIndonesian;
+    final sections = baseCv.sections
+        .map(
+          (s) => ImprovedCvSection(
+            heading: s.heading,
+            bullets: List<String>.from(s.bullets),
+          ),
+        )
+        .toList();
+
+    if (sections.isEmpty) {
+      sections.add(
+        ImprovedCvSection(
+          heading: isId ? 'Pengalaman Profesional' : 'Professional Experience',
+          bullets: [],
+        ),
+      );
+    }
+
+    final expIdx = sections.indexWhere(
+      (s) => RegExp(
+        r'pengalaman|experience|proyek|project|work|kerja',
+        caseSensitive: false,
+      ).hasMatch(s.heading),
+    );
+    final targetIdx = expIdx != -1 ? expIdx : 0;
+
+    final existing = sections[targetIdx].bullets;
+    final added = <String>[];
+    for (final w in winsToMerge) {
+      final b = w.toStarBullet().trim();
+      if (b.isNotEmpty && !existing.contains(b) && !added.contains(b)) {
+        added.add(b);
+      }
+    }
+
+    sections[targetIdx] = ImprovedCvSection(
+      heading: sections[targetIdx].heading,
+      bullets: [...added, ...existing],
+    );
+
+    final updatedChanges = List<String>.from(baseCv.changes);
+    if (added.isNotEmpty) {
+      final note = isId
+          ? 'Mengintegrasikan ${added.length} pencapaian baru dari Brag Doc (Log Win) ke bagian ${sections[targetIdx].heading}.'
+          : 'Merged ${added.length} verified Brag Doc win(s) into the ${sections[targetIdx].heading} section.';
+      if (!updatedChanges.contains(note)) {
+        updatedChanges.insert(0, note);
+      }
+    }
+
+    return ImprovedCV(
+      language: baseCv.language,
+      name: baseCv.name,
+      title: baseCv.title,
+      contact: baseCv.contact,
+      summary: baseCv.summary,
+      sections: sections,
+      changes: updatedChanges,
+    );
+  }
+
+  /// 8. GET /api/progress — Fetch score history, scan-verified quests, and Skill Gap
+  Future<Map<String, dynamic>?> fetchProgress() async {
+    try {
+      final deviceId = await getDeviceId();
+      final response = await _dio.get(
+        ApiConstants.progressEndpoint,
+        queryParameters: {'deviceId': deviceId},
+        options: Options(headers: {'x-device-id': deviceId}),
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 9. POST /api/progress/quest-toggle — Toggle self-reported quest in MySQL
+  Future<Map<String, dynamic>?> toggleSelfReportedQuest(String questKey) async {
+    try {
+      final deviceId = await getDeviceId();
+      final response = await _dio.post(
+        ApiConstants.questToggleEndpoint,
+        data: {
+          'deviceId': deviceId,
+          'questKey': questKey,
+        },
+        options: Options(headers: {'x-device-id': deviceId}),
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 10. POST /api/progress/mode — Switch career mode ('job_hunt' or 'hired')
+  Future<Map<String, dynamic>?> switchCareerMode({
+    required String mode,
+    String? displayName,
+    String? targetRole,
+  }) async {
+    try {
+      final deviceId = await getDeviceId();
+      final response = await _dio.post(
+        ApiConstants.careerModeEndpoint,
+        data: {
+          'deviceId': deviceId,
+          'mode': mode,
+          if (displayName != null) 'displayName': displayName,
+          if (targetRole != null) 'targetRole': targetRole,
+        },
+        options: Options(headers: {'x-device-id': deviceId}),
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Infer role across diverse fields (Data, Marketing, Finance, Design, HR, Engineering)
+  static String inferRoleFromText(String text) {
+    final lower = text.toLowerCase();
+    var bestRole = 'Software Engineer';
+    var bestScore = 0;
+
+    roleKeywordsCatalog.forEach((role, keywords) {
+      var score = 0;
+      if (lower.contains(role.toLowerCase())) score += 5;
+      for (final kw in keywords) {
+        if (lower.contains(kw.toLowerCase())) score += 1;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestRole = role;
+      }
+    });
+
+    return bestRole;
   }
 
   /// Dynamic, evidence-based local heuristic analysis ('id' vs 'en') — never hallucinates missing issues!
@@ -280,8 +763,11 @@ class ApiClient {
               : null,
           rewrite: unlocked
               ? RewriteExample(
-                  before: isId ? '[Pas Foto 4x6 di sudut atas CV]' : '[Headshot Photo in Top Corner]',
-                  after: 'Budi Santoso • Jakarta, Indonesia • linkedin.com/in/budisantoso • github.com/budisantoso',
+                  before: isId
+                      ? '[Pas Foto 4x6 di sudut atas CV]'
+                      : '[Headshot Photo in Top Corner]',
+                  after:
+                      'Budi Santoso • Jakarta, Indonesia • linkedin.com/in/budisantoso • github.com/budisantoso',
                 )
               : null,
         ),
@@ -296,7 +782,7 @@ class ApiClient {
     if (dobMaritalRx.hasMatch(text)) {
       issues.add(
         Issue(
-          id: 'dob_marital',
+          id: 'dob_age',
           category: 'personal_info',
           severity: 'critical',
           title: isId
@@ -364,7 +850,45 @@ class ApiClient {
       );
     }
 
-    // 4. Check clichés
+    // 4. Check quantifiable metrics
+    final hasNumbersRx = RegExp(
+      r'\b\d+(\.\d+)?%|\b\d+\+?\s*(users|clients|proyek|projects|pengguna|klien|leads|reports|transaksi)\b',
+      caseSensitive: false,
+    );
+    if (!hasNumbersRx.hasMatch(text)) {
+      issues.add(
+        Issue(
+          id: 'no_metrics',
+          category: 'achievements',
+          severity: 'warning',
+          title: isId
+              ? 'Minim metrik angka dan hasil terukur (quantified impact)'
+              : 'Lacks quantifiable metrics and measurable outcomes',
+          detail: unlocked
+              ? (isId
+                  ? 'Tanpa persentase peningkatan, efisiensi waktu, atau skala pengguna, rekruter sulit menilai skala kontribusi Anda.'
+                  : 'Without percentages, time saved, or scale metrics, recruiters cannot gauge the magnitude of your work.')
+              : null,
+          fix: unlocked
+              ? (isId
+                  ? 'Sertakan angka konkret atau gunakan penanda [X]% pada minimal 3 poin pencapaian utama Anda.'
+                  : 'Include concrete metrics (e.g., [X]% faster, [number] users impacted) in at least 3 bullets.')
+              : null,
+          rewrite: unlocked
+              ? RewriteExample(
+                  before: isId
+                      ? 'Meningkatkan performa aplikasi dan alur kerja tim.'
+                      : 'Improved application performance and team workflow.',
+                  after: isId
+                      ? 'Mempercepat waktu proses sebesar [X]% dan meningkatkan kualitas hasil hingga [X]%.'
+                      : 'Accelerated workflow execution by [X]% and improved deliverable accuracy by [X]%.',
+                )
+              : null,
+        ),
+      );
+    }
+
+    // 5. Check clichés
     final clicheRx = RegExp(
       r'\b(hard-working|hard\s+working|pekerja\s+keras|team\s+player|under\s+pressure|di\s*bawah\s+tekanan)\b',
       caseSensitive: false,
@@ -372,7 +896,7 @@ class ApiClient {
     if (clicheRx.hasMatch(text)) {
       issues.add(
         Issue(
-          id: 'cliches',
+          id: 'cliche_words',
           category: 'language_quality',
           severity: 'suggestion',
           title: isId
@@ -385,8 +909,8 @@ class ApiClient {
               : null,
           fix: unlocked
               ? (isId
-                  ? 'Ganti klaim subjektif dengan ringkasan keahlian teknis utama dan rekam jejak penyelesaian proyek.'
-                  : 'Replace subjective traits with concrete engineering specializations and sprint delivery evidence.')
+                  ? 'Ganti klaim subjektif dengan ringkasan keahlian utama dan rekam jejak penyelesaian proyek.'
+                  : 'Replace subjective traits with concrete domain specializations and project delivery evidence.')
               : null,
           rewrite: unlocked
               ? RewriteExample(
@@ -394,49 +918,71 @@ class ApiClient {
                       ? 'Pekerja keras yang berdedikasi tinggi dan mampu bekerja di bawah tekanan.'
                       : 'A hard-working team player able to work under pressure.',
                   after: isId
-                      ? 'Software Engineer dengan spesialisasi layanan backend Node.js dan aplikasi mobile Flutter berskala produksi.'
-                      : 'Results-driven Software Engineer experienced in shipping production Node.js & Flutter releases across agile 2-week sprints.',
+                      ? 'Profesional berorientasi hasil dengan rekam jejak pengiriman proyek tepat waktu dan peningkatan metrik kerja sebesar [X]%.'
+                      : 'Results-driven professional experienced in shipping high-impact deliverables with [X]% efficiency gains.',
                 )
               : null,
         ),
       );
     }
 
-    // 5. Missing Keywords
-    issues.add(
-      Issue(
-        id: 'missing_keywords',
-        category: 'keyword_match',
-        severity: 'warning',
-        title: isId
-            ? 'Beberapa kata kunci teknis utama untuk posisi Software Engineer belum tercantum'
-            : 'Missing several core industry keywords for Software Engineer',
-        detail: unlocked
-            ? (isId
-                ? 'Mesin ATS mencocokkan kata kunci keahlian di CV Anda dengan standar industri posisi target.'
-                : 'ATS ranking algorithms score your resume based on domain-specific engineering keywords.')
-            : null,
-        fix: unlocked
-            ? (isId
-                ? 'Tambahkan kata kunci teknis yang relevan dengan pengalaman Anda seperti CI/CD, Docker, Unit Testing, dan Clean Architecture.'
-                : 'Incorporate relevant technical keywords such as CI/CD, Unit Testing, Docker, and Clean Architecture into your experience bullets.')
-            : null,
-        rewrite: unlocked
-            ? RewriteExample(
-                before: isId ? 'Keahlian: Node.js, Express, MySQL, Flutter' : 'Skills: Node.js, Express, MySQL, Flutter',
-                after: isId
-                    ? 'Keahlian: Node.js, Express, MySQL, Flutter, Dart, REST API, Docker, CI/CD, Unit Testing, Clean Architecture'
-                    : 'Skills: Node.js, Express, MySQL, Flutter, Dart, REST APIs, Docker, CI/CD, Unit Testing, Clean Architecture',
-              )
-            : null,
-      ),
-    );
+    // 6. Role-agnostic Keyword Matching
+    final detectedRole = inferRoleFromText(text);
+    final roleKws = roleKeywordsCatalog[detectedRole] ??
+        roleKeywordsCatalog['Software Engineer']!;
+    final lowerText = text.toLowerCase();
+    final matchedKws = <String>[];
+    final missingKws = <String>[];
+    for (final kw in roleKws) {
+      if (lowerText.contains(kw.toLowerCase())) {
+        matchedKws.add(kw);
+      } else {
+        missingKws.add(kw);
+      }
+    }
+
+    if (missingKws.length >= 4) {
+      issues.add(
+        Issue(
+          id: 'missing_core_keywords',
+          category: 'keyword_match',
+          severity: 'warning',
+          title: isId
+              ? 'Beberapa kata kunci utama untuk posisi $detectedRole belum tercantum'
+              : 'Missing several core industry keywords for $detectedRole',
+          detail: unlocked
+              ? (isId
+                  ? 'Mesin ATS mencocokkan kata kunci keahlian di CV Anda dengan standar industri posisi $detectedRole.'
+                  : 'ATS ranking algorithms score your resume based on domain-specific keywords for $detectedRole.')
+              : null,
+          fix: unlocked
+              ? (isId
+                  ? 'Tambahkan kata kunci relevan yang Anda kuasai seperti ${missingKws.take(3).join(', ')}.'
+                  : 'Incorporate relevant keywords you possess such as ${missingKws.take(3).join(', ')} into your bullets.')
+              : null,
+          rewrite: unlocked
+              ? RewriteExample(
+                  before: isId
+                      ? 'Keahlian: ${matchedKws.take(3).join(', ')}'
+                      : 'Skills: ${matchedKws.take(3).join(', ')}',
+                  after: isId
+                      ? 'Keahlian: ${[...matchedKws.take(4), ...missingKws.take(3)].join(', ')}'
+                      : 'Skills: ${[...matchedKws.take(4), ...missingKws.take(3)].join(', ')}',
+                )
+              : null,
+        ),
+      );
+    }
 
     var score = 100;
     for (final issue in issues) {
-      if (issue.severity == 'critical') score -= 11;
-      else if (issue.severity == 'warning') score -= 7;
-      else if (issue.severity == 'suggestion') score -= 3;
+      if (issue.severity == 'critical') {
+        score -= 11;
+      } else if (issue.severity == 'warning') {
+        score -= 7;
+      } else if (issue.severity == 'suggestion') {
+        score -= 3;
+      }
     }
     score = score.clamp(10, 100);
 
@@ -449,12 +995,10 @@ class ApiClient {
           : 'English ATS evaluation based strictly on the actual content of your uploaded CV.',
       issues: issues,
       keywordMatch: KeywordMatch(
-        jobTitle: 'Software Engineer',
-        matched: ['Node.js', 'Express', 'MySQL', 'Flutter', 'Dart', 'Git', 'REST API'],
-        missing: unlocked
-            ? ['CI/CD', 'Docker', 'Unit Testing', 'Clean Architecture', 'Microservices']
-            : [],
-        missingCount: 5,
+        jobTitle: detectedRole,
+        matched: matchedKws,
+        missing: unlocked ? missingKws : const [],
+        missingCount: missingKws.length,
       ),
       fileName: fileName,
       engine: 'rule-based',
@@ -462,7 +1006,7 @@ class ApiClient {
     );
 
     return AnalyzeResponseData(
-      scanToken: 'scn_demo_9f8e7d6c',
+      scanToken: 'scn_local_${DateTime.now().millisecondsSinceEpoch}',
       result: result,
       encryptedToken: 'demo_encrypted_token_aes256',
     );

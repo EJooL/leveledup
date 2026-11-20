@@ -83,3 +83,49 @@ INSERT INTO access_codes (code, description, max_uses, times_used, is_active)
 VALUES ('LEVELEDUPVIP2026', 'Kode Promo Peluncuran Mobile MVP', 1000, 0, TRUE)
 ON DUPLICATE KEY UPDATE code=code;
 
+-- 6. Tabel Profil Karir Pengguna (Device-scoped Identity)
+CREATE TABLE IF NOT EXISTS career_profiles (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id VARCHAR(128) NOT NULL UNIQUE,
+    display_name VARCHAR(128) NOT NULL DEFAULT 'Ijul',
+    target_role VARCHAR(128) NOT NULL DEFAULT 'Fresh Graduate Professional',
+    career_mode ENUM('job_hunt', 'hired') NOT NULL DEFAULT 'job_hunt',
+    hired_at DATETIME NULL,
+    last_win_logged_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_career_device (device_id)
+) ENGINE=InnoDB;
+
+-- 7. Tabel Brag Doc / Work Wins (Living CV Bullets)
+CREATE TABLE IF NOT EXISTS work_wins (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id VARCHAR(128) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    impact_metric VARCHAR(255) NULL,
+    category VARCHAR(64) NOT NULL DEFAULT 'project_delivery',
+    language ENUM('id', 'en') NOT NULL DEFAULT 'en',
+    star_bullet TEXT NOT NULL,
+    merged_into_scan_token VARCHAR(64) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_wins_device (device_id)
+) ENGINE=InnoDB;
+
+-- 8. Tabel Checklist Quests (Scan-Verified, Win-Verified & Self-Reported)
+CREATE TABLE IF NOT EXISTS career_quests (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id VARCHAR(128) NOT NULL,
+    quest_key VARCHAR(64) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    career_mode ENUM('job_hunt', 'hired') NOT NULL DEFAULT 'job_hunt',
+    verification_type ENUM('scan_verified', 'win_verified', 'self_reported') NOT NULL DEFAULT 'self_reported',
+    linked_issue_key VARCHAR(64) NULL,
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    completed_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_device_quest (device_id, quest_key),
+    INDEX idx_quests_device (device_id)
+) ENGINE=InnoDB;
+
+

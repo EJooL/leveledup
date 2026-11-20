@@ -12,6 +12,7 @@ const { pool } = require('../config/db');
 router.post('/', async (req, res, next) => {
   try {
     const { text, fileName = 'CV.pdf', deviceId = null, numPages = 1, hasPhoto = false } = req.body;
+    const effectiveDeviceId = deviceId || req.headers['x-device-id'] || null;
 
     if (!text || typeof text !== 'string' || text.trim().length < 80) {
       return res.status(400).json({
@@ -52,7 +53,7 @@ router.post('/', async (req, res, next) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           scanToken,
-          deviceId || null,
+          effectiveDeviceId,
           cleanFileName,
           parseInt(numPages, 10) || 1,
           cleanText.length,

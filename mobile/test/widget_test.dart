@@ -22,7 +22,7 @@ void main() {
 
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Scanner'), findsOneWidget);
-    expect(find.text('Quests'), findsOneWidget);
-    expect(find.text('Skills'), findsOneWidget);
+    expect(find.text('Wins'), findsOneWidget);
+    expect(find.text('Progress'), findsOneWidget);
   });
 }

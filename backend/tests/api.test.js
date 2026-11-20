@@ -1,5 +1,6 @@
 const http = require('http');
 const app = require('../server');
+const { pool } = require('../config/db');
 
 const SAMPLE_PDF = `%PDF-1.4
 1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
@@ -177,10 +178,11 @@ async function runTests() {
     assert(shortTextRes.body.code === 'TEXT_TOO_SHORT', 'Error code is TEXT_TOO_SHORT');
 
     // 3b. Full CV analysis
+    const testDeviceId = `device-test-${Date.now()}`;
     const analyzeBody = JSON.stringify({
       text: SAMPLE_CV_TEXT,
       fileName: 'Resume_Budi.pdf',
-      deviceId: 'device-test-uuid-1234',
+      deviceId: testDeviceId,
     });
     const analyzeRes = await makeRequest(
       port,
@@ -284,8 +286,221 @@ async function runTests() {
     const hasPlaceholders = bulletsText.includes('[') && bulletsText.includes(']');
     assert(hasPlaceholders, 'Anti-Fabrication / Zero-Hallucination placeholders [placeholder] correctly applied');
 
+    // -----------------------------------------------------------------
+    // TEST 6: Brag Doc / Work Wins -> Living CV (POST & GET /api/wins)
+    // -----------------------------------------------------------------
+    console.log('\n🔹 Test 6: Brag Doc / Work Wins (/api/wins)');
+
+    // 6a. Log a win without metrics -> must enforce Zero-Hallucination [placeholder]
+    const winNoMetricRes = await makeRequest(
+      port,
+      '/api/wins',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': testDeviceId },
+      JSON.stringify({
+        title: 'Redesigned onboarding data pipeline for weekly KPI reporting',
+        impactMetric: '',
+        category: 'process_quality',
+        language: 'en',
+      })
+    );
+    assert(winNoMetricRes.status === 201, `POST /api/wins returns HTTP 201 (Got ${winNoMetricRes.status})`);
+    assert(
+      winNoMetricRes.body.win &&
+        winNoMetricRes.body.win.starBullet.includes('[') &&
+        winNoMetricRes.body.win.starBullet.includes(']'),
+      'Zero-Hallucination placeholder inserted when win has no metric'
+    );
+    assert(Boolean(winNoMetricRes.body.badgeUnlocked), 'First logged win unlocks celebratory badge');
+
+    // 6b. Log a bilingual Indonesian win with an explicit metric
+    const winIdMetricRes = await makeRequest(
+      port,
+      '/api/wins',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': testDeviceId },
+      JSON.stringify({
+        title: 'Mengoptimalkan kampanye SEO dan konten digital marketing',
+        impactMetric: 'meningkatkan leads organik sebesar 35%',
+        category: 'metrics_growth',
+        language: 'id',
+      })
+    );
+    assert(winIdMetricRes.status === 201, `Indonesian win returns HTTP 201 (Got ${winIdMetricRes.status})`);
+    assert(winIdMetricRes.body.win.language === 'id', 'Indonesian win language preserved');
+    assert(winIdMetricRes.body.win.starBullet.includes('35%'), 'Provided metric (35%) preserved in STAR bullet');
+
+    // 6c. GET /api/wins with quarterly reminder check
+    const getWinsRes = await makeRequest(
+      port,
+      '/api/wins?simulateReminder=true',
+      'GET',
+      { 'x-device-id': testDeviceId }
+    );
+    assert(getWinsRes.status === 200, `GET /api/wins returns HTTP 200 (Got ${getWinsRes.status})`);
+    assert(Array.isArray(getWinsRes.body.wins) && getWinsRes.body.wins.length === 2, 'Returns 2 persisted wins for device');
+    assert(getWinsRes.body.needsQuarterlyReminder === true, 'Quarterly 3-month living-CV reminder flag works');
+
+    // 6d. POST /api/wins/merge-cv ("Add to my CV")
+    const mergeCvRes = await makeRequest(
+      port,
+      '/api/wins/merge-cv',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': testDeviceId },
+      JSON.stringify({
+        winIds: [winNoMetricRes.body.win.id, winIdMetricRes.body.win.id],
+        scanToken: analyzeRes.body.scanToken,
+      })
+    );
+    assert(mergeCvRes.status === 200, `POST /api/wins/merge-cv returns HTTP 200 (Got ${mergeCvRes.status})`);
+    assert(mergeCvRes.body.mergedCount === 2, `Merged 2 wins into living CV (Got ${mergeCvRes.body.mergedCount})`);
+    assert(
+      mergeCvRes.body.cv &&
+        Array.isArray(mergeCvRes.body.cv.sections) &&
+        JSON.stringify(mergeCvRes.body.cv.sections).includes('35%'),
+      'Living CV sections contain merged Brag Doc STAR bullets'
+    );
+
+    // -----------------------------------------------------------------
+    // TEST 7: Score History, Verified Quests & Skill Gap (/api/progress)
+    // -----------------------------------------------------------------
+    console.log('\n🔹 Test 7: Progress, Score History, Scan-Verified Quests & Skill Gap (/api/progress)');
+
+    // 7a. Perform a second, improved CV scan for the same device (bias removed, metrics added)
+    const improvedCvText = `
+Budi Santoso
+Backend & Mobile Software Engineer
+Email: budi.santoso@example.com | Phone: +62 812 3456 7890 | Jakarta, Indonesia
+linkedin.com/in/budisantoso | github.com/budisantoso
+
+Ringkasan:
+Software Engineer dengan spesialisasi layanan backend Node.js, Express, MySQL, dan aplikasi mobile Flutter.
+
+Pengalaman Kerja:
+PT Solusi Teknologi Indonesia (Jan 2023 - Sekarang)
+Software Engineer
+- Mengoptimalkan arsitektur database MySQL dan layanan REST API Node.js Express, meningkatkan kecepatan query sebesar 42% untuk 15000+ pengguna aktif.
+- Merancang dan mengintegrasikan modul autentikasi serta payment gateway menggunakan Docker dan CI/CD dengan tingkat uptime 99.9%.
+- Mengembangkan modul aplikasi mobile lintas platform dengan pendekatan Unit Testing dan Microservices, mempercepat rilis fitur sebesar 30%.
+
+Pendidikan:
+S1 Sistem Informasi - Universitas Indonesia (2018 - 2022)
+
+Keahlian:
+Node.js, Express, MySQL, JavaScript, Git, Docker, REST API, CI/CD, Unit Testing, Microservices, System Architecture, Agile/Scrum
+`;
+
+    const secondAnalyzeRes = await makeRequest(
+      port,
+      '/api/analyze',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': testDeviceId },
+      JSON.stringify({
+        text: improvedCvText,
+        fileName: 'Resume_Budi_v2.pdf',
+        deviceId: testDeviceId,
+      })
+    );
+    assert(secondAnalyzeRes.status === 200, `Second CV scan returns HTTP 200 (Got ${secondAnalyzeRes.status})`);
+
+    // 7b. GET /api/progress -> verify score timeline, fixed issues diff, scan-verified quests, and Skill Gap
+    const progressRes = await makeRequest(
+      port,
+      '/api/progress',
+      'GET',
+      { 'x-device-id': testDeviceId }
+    );
+    assert(progressRes.status === 200, `GET /api/progress returns HTTP 200 (Got ${progressRes.status})`);
+    assert(
+      Array.isArray(progressRes.body.scoreHistory) && progressRes.body.scoreHistory.length === 2,
+      `Score history tracks 2 chronological scans (Got ${progressRes.body.scoreHistory?.length})`
+    );
+    assert(
+      progressRes.body.timelineLabel.includes('->') &&
+        progressRes.body.scoreHistory[1].scoreDelta > 0,
+      `Score timeline shows positive progression (${progressRes.body.timelineLabel})`
+    );
+    assert(
+      Array.isArray(progressRes.body.scoreHistory[1].fixedIssues) &&
+        progressRes.body.scoreHistory[1].fixedIssues.length >= 3,
+      `Score history diff records fixed issues between versions (${progressRes.body.scoreHistory[1].fixedIssues.length} fixed)`
+    );
+
+    const quests = progressRes.body.quests || [];
+    const firstScanQuest = quests.find((q) => q.questKey === 'q_first_scan');
+    const purgeBiasQuest = quests.find((q) => q.questKey === 'q_purge_bias');
+    const fixMetricsQuest = quests.find((q) => q.questKey === 'q_fix_no_metrics');
+    assert(
+      firstScanQuest && firstScanQuest.isCompleted === true && firstScanQuest.verificationType === 'scan_verified',
+      'q_first_scan is automatically verified from scan data'
+    );
+    assert(
+      purgeBiasQuest && purgeBiasQuest.isCompleted === true && purgeBiasQuest.verificationType === 'scan_verified',
+      'q_purge_bias is automatically verified when bias issues are eliminated'
+    );
+    assert(
+      fixMetricsQuest && fixMetricsQuest.isCompleted === true,
+      'Auto-generated issue quest (q_fix_no_metrics) marked complete after re-scan confirms issue is gone'
+    );
+    assert(
+      progressRes.body.checklistSummary &&
+        /\d+ of \d+ done/.test(progressRes.body.checklistSummary.progressLabel),
+      `Checklist summary reports plain progress (${progressRes.body.checklistSummary?.progressLabel})`
+    );
+    assert(
+      progressRes.body.skillGap &&
+        typeof progressRes.body.skillGap.jobTitle === 'string' &&
+        Array.isArray(progressRes.body.skillGap.gaps),
+      'Skill Gap structure returned from scan keywords'
+    );
+
+    // 7c. Verify scan_verified quests reject manual toggling
+    const illegalToggleRes = await makeRequest(
+      port,
+      '/api/progress/quest-toggle',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': testDeviceId },
+      JSON.stringify({ questKey: 'q_first_scan' })
+    );
+    assert(
+      illegalToggleRes.status === 400 && illegalToggleRes.body.code === 'QUEST_NOT_MANUAL',
+      'Scan-verified quest rejects manual toggle with HTTP 400 QUEST_NOT_MANUAL'
+    );
+
+    // 7d. Verify self_reported quests allow manual toggling
+    const validToggleRes = await makeRequest(
+      port,
+      '/api/progress/quest-toggle',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': testDeviceId },
+      JSON.stringify({ questKey: 'q_self_linkedin' })
+    );
+    assert(validToggleRes.status === 200, `Self-reported quest toggle returns HTTP 200 (Got ${validToggleRes.status})`);
+    const toggledLinkedin = (validToggleRes.body.quests || []).find((q) => q.questKey === 'q_self_linkedin');
+    assert(toggledLinkedin && toggledLinkedin.isCompleted === true, 'Self-reported quest state persisted in MySQL');
+
+    // 7e. Switch to Hired mode ("I got the job") -> First 90 Days checklist
+    const hiredModeRes = await makeRequest(
+      port,
+      '/api/progress/mode',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': testDeviceId },
+      JSON.stringify({ mode: 'hired' })
+    );
+    assert(hiredModeRes.status === 200, `POST /api/progress/mode returns HTTP 200 (Got ${hiredModeRes.status})`);
+    assert(hiredModeRes.body.profile.careerMode === 'hired', 'Profile mode switched to hired');
+    assert(hiredModeRes.body.checklistSummary.mode === 'hired', 'Checklist switched to First 90 Days mode');
+    const hiredFirstWinQuest = (hiredModeRes.body.quests || []).find((q) => q.questKey === 'hired_log_first_win');
+    const hiredMergeWinQuest = (hiredModeRes.body.quests || []).find((q) => q.questKey === 'hired_merge_win_cv');
+    assert(
+      hiredFirstWinQuest && hiredFirstWinQuest.isCompleted === true &&
+        hiredMergeWinQuest && hiredMergeWinQuest.isCompleted === true,
+      'First 90 Days win-verified quests are automatically verified from Brag Doc & Living CV actions'
+    );
+
   } finally {
     server.close();
+    await pool.end();
   }
 
   console.log('\n📊 ===============================================');

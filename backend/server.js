@@ -15,6 +15,8 @@ const parseRoutes = require('./routes/parseRoutes');
 const analyzeRoutes = require('./routes/analyzeRoutes');
 const unlockRoutes = require('./routes/unlockRoutes');
 const rewriteRoutes = require('./routes/rewriteRoutes');
+const winRoutes = require('./routes/winRoutes');
+const progressRoutes = require('./routes/progressRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -51,6 +53,8 @@ app.use('/api/parse', parseRoutes);
 app.use('/api/analyze', analyzeRoutes);
 app.use('/api/unlock', unlockRoutes);
 app.use('/api/rewrite', rewriteRoutes);
+app.use('/api/wins', winRoutes);
+app.use('/api/progress', progressRoutes);
 
 // 404 Route Handler
 app.use((req, res, next) => {
