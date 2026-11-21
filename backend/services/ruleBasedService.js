@@ -13,6 +13,8 @@ const { detectTextLanguage, normalizeLanguage } = require('./bilingualValidation
 const {
   hasExplicitPhotoEvidence,
   hasQuantifiedMetric,
+  computeTextStats,
+  calculateAtsScore,
   sanitizeAnalysisResult,
 } = require('./aiGuardrails');
 
@@ -347,14 +349,14 @@ function analyzeWithRules(text, fileName = 'CV.pdf', options = {}) {
     });
   }
 
-  // Score Calculation
-  let overallScore = 100;
-  for (const issue of issues) {
-    if (issue.severity === 'critical') overallScore -= 11;
-    else if (issue.severity === 'warning') overallScore -= 7;
-    else if (issue.severity === 'suggestion') overallScore -= 3;
-  }
-  overallScore = Math.max(10, Math.min(100, overallScore));
+  // Deterministic Score Calculation (shared with AI Analysis engine)
+  const overallScore = calculateAtsScore({
+    issues,
+    matchedKeywords: keywordAnalysis.matched,
+    missingKeywords: keywordAnalysis.missing,
+    hasPhoto,
+    textStats: computeTextStats(text),
+  });
 
   let summary = '';
   if (isId) {

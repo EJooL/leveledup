@@ -1,9 +1,72 @@
 const express = require('express');
 const router = express.Router();
-const { analyzeCv } = require('../services/aiAnalysisService');
-const { encryptToken, generateScanToken } = require('../services/tokenService');
-const { formatBilingualError, resolveRequestLanguage } = require('../services/bilingualValidation');
+const { analyzeCv, computeCvContentHash } = require('../services/aiAnalysisService');
+const { encryptToken, decryptToken, generateScanToken } = require('../services/tokenService');
+const { formatBilingualError, resolveRequestLanguage, normalizeLanguage } = require('../services/bilingualValidation');
 const { pool } = require('../config/db');
+
+/**
+ * Look up a previous scan with the exact same SHA-256 contentHash for this device
+ * so even across server restarts, re-uploading an unchanged CV anchors to the exact
+ * same score and structured findings (zero phantom score drops in ATS Score History).
+ */
+async function findAnchoredScanInDb({ deviceId, contentHash, mode, expectedLang, fileName }) {
+  if (!deviceId || !contentHash) return null;
+  try {
+    const [rows] = await pool.execute(
+      `SELECT overall_score, summary, mode, engine, encrypted_token
+       FROM scans
+       WHERE device_id = ? AND mode = ? AND encrypted_token IS NOT NULL
+       ORDER BY id DESC
+       LIMIT 15`,
+      [deviceId, mode]
+    );
+
+    for (const row of rows) {
+      try {
+        const payload = decryptToken(row.encrypted_token);
+        if (!payload || payload.contentHash !== contentHash) continue;
+        if (expectedLang && payload.language && payload.language !== expectedLang) continue;
+
+        const lang = payload.language || expectedLang || 'en';
+        const isId = lang === 'id';
+        const missing = Array.isArray(payload.missingKeywords) ? payload.missingKeywords : [];
+        const matched = Array.isArray(payload.matchedKeywords) ? payload.matchedKeywords : [];
+        const engine = payload.engine || row.engine || 'gemini';
+
+        return {
+          mode: row.mode || mode || 'global',
+          language: lang,
+          overallScore: Number(payload.overallScore ?? row.overall_score),
+          summary: payload.summary || row.summary || '',
+          issues: Array.isArray(payload.issues) ? payload.issues : [],
+          keywordMatch: {
+            jobTitle: payload.jobTitle || 'Professional',
+            matched,
+            missing,
+            missingCount: missing.length,
+          },
+          meta: {
+            fileName,
+            language: lang,
+            analyzedAtLabel:
+              engine === 'gemini'
+                ? (isId ? 'Dianalisis AI Gemini (Bahasa Indonesia)' : 'Analyzed by Gemini AI (English)')
+                : (isId ? 'Evaluasi Bahasa Indonesia' : 'English ATS Evaluation'),
+            engine,
+            contentHash,
+            cachedAnchor: true,
+          },
+        };
+      } catch {
+        // Ignore undecryptable legacy tokens
+      }
+    }
+  } catch (err) {
+    console.warn(`[Anchor Lookup Warning] Could not check prior scans in MySQL: ${err.message}`);
+  }
+  return null;
+}
 
 /**
  * POST /api/analyze
@@ -12,7 +75,16 @@ const { pool } = require('../config/db');
  */
 router.post('/', async (req, res, next) => {
   try {
-    const { text, fileName = 'CV.pdf', deviceId = null, numPages = 1, hasPhoto = false, language } = req.body;
+    const {
+      text,
+      fileName = 'CV.pdf',
+      deviceId = null,
+      numPages = 1,
+      hasPhoto = false,
+      language,
+      mode = 'global',
+      region = null,
+    } = req.body;
     const effectiveDeviceId = deviceId || req.headers['x-device-id'] || null;
 
     if (!text || typeof text !== 'string' || text.trim().length < 80) {
@@ -27,16 +99,44 @@ router.post('/', async (req, res, next) => {
 
     const cleanText = text.trim();
     const cleanFileName = (typeof fileName === 'string' && fileName.trim()) ? fileName.trim() : 'CV.pdf';
+    const normalizedMode = (typeof mode === 'string' && mode.trim()) ? mode.trim().toLowerCase() : 'global';
+    const normalizedRegion = (typeof region === 'string' && region.trim()) ? region.trim().toLowerCase() : null;
+    const explicitLang = language && String(language).toLowerCase() !== 'auto'
+      ? normalizeLanguage(language, cleanText)
+      : null;
 
-    // Run ATS analysis (Gemini or Rule-Based heuristic)
-    const fullResult = await analyzeCv(cleanText, cleanFileName, {
+    const contentHash = computeCvContentHash({
+      text: cleanText,
+      mode: normalizedMode,
+      region: normalizedRegion,
       hasPhoto: Boolean(hasPhoto),
     });
+
+    // Check DB anchor first (protects exact-content consistency even across server restarts),
+    // otherwise run deterministic ATS analysis (in-memory SHA-256 cache -> Gemini temp=0 -> Rule-Based)
+    let fullResult = await findAnchoredScanInDb({
+      deviceId: effectiveDeviceId,
+      contentHash,
+      mode: normalizedMode,
+      expectedLang: explicitLang,
+      fileName: cleanFileName,
+    });
+
+    if (!fullResult) {
+      fullResult = await analyzeCv(cleanText, cleanFileName, {
+        hasPhoto: Boolean(hasPhoto),
+        language: explicitLang || undefined,
+        mode: normalizedMode,
+        region: normalizedRegion,
+      });
+    }
+
     const scanToken = generateScanToken();
 
-    // Prepare encrypted token sealing the locked premium details
+    // Prepare encrypted token sealing the locked premium details + SHA-256 contentHash
     const sealedPayload = {
       scanToken,
+      contentHash,
       language: fullResult.language || 'en',
       issues: fullResult.issues,
       missingKeywords: fullResult.keywordMatch ? fullResult.keywordMatch.missing : [],
@@ -63,7 +163,7 @@ router.post('/', async (req, res, next) => {
           cleanText.length,
           fullResult.overallScore,
           fullResult.summary,
-          'global',
+          normalizedMode,
           fullResult.meta ? fullResult.meta.engine : 'rule-based',
           false,
           encryptedToken,
@@ -122,7 +222,7 @@ router.post('/', async (req, res, next) => {
     }));
 
     const freeTierResult = {
-      mode: fullResult.mode || 'global',
+      mode: fullResult.mode || normalizedMode,
       language: fullResult.language || 'en',
       overallScore: fullResult.overallScore,
       summary: fullResult.summary,
@@ -137,6 +237,8 @@ router.post('/', async (req, res, next) => {
         language: fullResult.language || 'en',
         analyzedAtLabel: fullResult.meta ? fullResult.meta.analyzedAtLabel : 'Dianalisis Sistem',
         engine: fullResult.meta ? fullResult.meta.engine : 'rule-based',
+        contentHash,
+        cachedAnchor: Boolean(fullResult.meta && fullResult.meta.cachedAnchor),
       },
     };
 

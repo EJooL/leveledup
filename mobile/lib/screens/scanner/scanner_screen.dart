@@ -8,16 +8,103 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/pdf_generator.dart';
 import '../../providers/cv_provider.dart';
 import '../../widgets/issue_card.dart';
+import '../../widgets/leveledup_arrow.dart';
 import '../../widgets/placeholder_rich_text.dart';
 
 class ScannerScreen extends ConsumerStatefulWidget {
-  const ScannerScreen({super.key});
+  final bool isActive;
+
+  const ScannerScreen({
+    super.key,
+    this.isActive = true,
+  });
 
   @override
   ConsumerState<ScannerScreen> createState() => _ScannerScreenState();
 }
 
-class _ScannerScreenState extends ConsumerState<ScannerScreen> {
+class _ScannerScreenState extends ConsumerState<ScannerScreen>
+    with TickerProviderStateMixin {
+  AnimationController? _entranceController;
+  AnimationController? _ambientController;
+
+  Animation<double>? _glowReveal;
+  Animation<double>? _backCardProgress;
+  Animation<double>? _frontCardProgress;
+  Animation<double>? _headlineProgress;
+  Animation<double>? _ctaProgress;
+  Animation<double>? _ambientFloat;
+
+  void _ensureAnimationsInitialized() {
+    if (_entranceController != null) return;
+
+    final entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 780),
+    );
+    final ambient = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4200),
+    );
+
+    _entranceController = entrance;
+    _ambientController = ambient;
+
+    _glowReveal = CurvedAnimation(
+      parent: entrance,
+      curve: const Interval(0.0, 0.78, curve: Curves.easeOutCubic),
+    );
+    _backCardProgress = CurvedAnimation(
+      parent: entrance,
+      curve: const Interval(0.0, 0.72, curve: Curves.easeOutCubic),
+    );
+    _frontCardProgress = CurvedAnimation(
+      parent: entrance,
+      curve: const Interval(0.10, 0.86, curve: Curves.easeOutCubic),
+    );
+    _headlineProgress = CurvedAnimation(
+      parent: entrance,
+      curve: const Interval(0.22, 0.88, curve: Curves.easeOutCubic),
+    );
+    _ctaProgress = CurvedAnimation(
+      parent: entrance,
+      curve: const Interval(0.34, 1.0, curve: Curves.easeOutCubic),
+    );
+    _ambientFloat = CurvedAnimation(
+      parent: ambient,
+      curve: Curves.easeInOutSine,
+    );
+
+    if (widget.isActive) {
+      entrance.forward();
+      ambient.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ensureAnimationsInitialized();
+  }
+
+  @override
+  void didUpdateWidget(covariant ScannerScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _ensureAnimationsInitialized();
+    if (widget.isActive && !oldWidget.isActive) {
+      _entranceController?.forward(from: 0.0);
+      _ambientController?.repeat(reverse: true);
+    } else if (!widget.isActive && oldWidget.isActive) {
+      _ambientController?.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _entranceController?.dispose();
+    _ambientController?.dispose();
+    super.dispose();
+  }
   Future<void> _pickPdfDocument() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -75,13 +162,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
         return AlertDialog(
           backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
           title: const Row(
             children: [
               Icon(Icons.vpn_key_rounded, color: AppColors.terracottaBright),
-              SizedBox(width: 10),
+              SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Unlock Full ATS Solutions',
@@ -106,7 +193,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   height: 1.4,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               TextField(
                 controller: controller,
                 style: GoogleFonts.jetBrainsMono(
@@ -158,54 +245,201 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _ensureAnimationsInitialized();
+    if (widget.isActive &&
+        _entranceController!.status == AnimationStatus.dismissed) {
+      _entranceController!.forward();
+      _ambientController!.repeat(reverse: true);
+    }
     final scanState = ref.watch(cvScanProvider);
+    final Widget activeView;
+    if (scanState.isBusy) {
+      activeView = KeyedSubtree(
+        key: const ValueKey('scanner_busy'),
+        child: _buildScanningProgress(scanState.step),
+      );
+    } else if (scanState.analysisResult != null) {
+      activeView = KeyedSubtree(
+        key: ValueKey(
+          'scanner_results_${scanState.scanToken ?? scanState.analysisResult!.overallScore}',
+        ),
+        child: _buildCurvedResultsSheet(scanState),
+      );
+    } else {
+      activeView = KeyedSubtree(
+        key: const ValueKey('scanner_splash'),
+        child: _buildTiltedCardsSplashHero(scanState.errorMessage),
+      );
+    }
 
     return Material(
       color: AppColors.background,
       child: SafeArea(
-        child: Builder(
-          builder: (context) {
-            if (scanState.isBusy) {
-              return _buildScanningProgress(scanState.step);
-            }
-
-            if (scanState.analysisResult != null) {
-              return _buildCurvedResultsSheet(scanState);
-            }
-
-            return _buildTiltedCardsSplashHero(scanState.errorMessage);
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 420),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          layoutBuilder: (currentChild, previousChildren) {
+            return Stack(
+              fit: StackFit.expand,
+              alignment: Alignment.topCenter,
+              children: [
+                ...previousChildren,
+                if (currentChild != null) currentChild,
+              ],
+            );
           },
+          transitionBuilder: (child, animation) {
+            final slide = Tween<Offset>(
+              begin: const Offset(0, 0.05),
+              end: Offset.zero,
+            ).animate(animation);
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: slide,
+                child: child,
+              ),
+            );
+          },
+          child: activeView,
         ),
       ),
     );
   }
 
   /// Matched 1:1 to Screen 1 (Top-Left) of the Reference Image:
-  /// Centered Brand Logo + Tilted 3D Dual Card Stack + Centered Headline + Bottom Pill Button
+  /// Centered Brand Logo + Warm Card-Backed Glow + Sliding Tilted 3D Dual Card Stack
   Widget _buildTiltedCardsSplashHero(String? errorMessage) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+    final glowReveal = _glowReveal!;
+    final backCardProgress = _backCardProgress!;
+    final frontCardProgress = _frontCardProgress!;
+    final headlineProgress = _headlineProgress!;
+    final ctaProgress = _ctaProgress!;
+    final ambientFloat = _ambientFloat!;
+    final backCardWidget = Container(
+      width: 264,
+      height: 160,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderBright),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // 1. Centered Top Brand Mark (Matched to AtomBank top logo in Screen 1)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 28,
-                height: 28,
+          Text(
+            'GLOBAL ATS ENGINE · 5 PILLARS',
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 10,
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Zero-Hallucination AI Rewrite',
+            style: TextStyle(
+              fontSize: 11.5,
+              color: AppColors.textMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final frontCardWidget = Container(
+      width: 268,
+      height: 160,
+      decoration: BoxDecoration(
+        color: AppColors.terracotta,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -32,
+              top: 16,
+              bottom: 16,
+              child: Container(
+                width: 120,
+                height: 120,
                 decoration: BoxDecoration(
-                  color: AppColors.terracotta,
                   shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.arrow_upward_rounded,
-                  color: AppColors.white,
-                  size: 16,
+                  border: Border.all(
+                    color: AppColors.white.withValues(alpha: 0.18),
+                    width: 24,
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
-              const Text.rich(
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'ATS SCORE',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.white.withValues(alpha: 0.8),
+                    ),
+                  ),
+                  Text(
+                    '92 / 100',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.white,
+                      letterSpacing: -0.8,
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'TAP TO UPLOAD PDF (MAX 4MB)',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Global Ready · Zero Bias',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      child: Column(
+        children: [
+          // 1. Centered Top Brand Mark
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              LeveledUpArrow(width: 16, height: 24),
+              SizedBox(width: 8),
+              Text.rich(
                 TextSpan(
                   style: TextStyle(
                     fontSize: 17,
@@ -226,215 +460,181 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 36),
+          const SizedBox(height: 32),
 
-          // 2. Floating Tilted 3D Card Stack (Matched 1:1 to Screen 1 of Reference)
+          // 2. Smooth Sliding Floating Tilted Card Stack with Warm Glow Behind Cards
           GestureDetector(
             onTap: _pickPdfDocument,
-            child: SizedBox(
-              height: 235,
-              width: double.infinity,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Subtle radial terracotta glow behind cards
-                  Container(
-                    width: 220,
-                    height: 220,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.terracotta.withValues(alpha: 0.22),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Back Tilted Card (White/Light Slate tilted right)
-                  Transform.translate(
-                    offset: const Offset(10, 28),
-                    child: Transform.rotate(
-                      angle: 0.14,
-                      child: Container(
-                        width: 265,
-                        height: 158,
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E24),
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: AppColors.borderBright),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.45),
-                              blurRadius: 20,
-                              offset: const Offset(0, 12),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              'GLOBAL ATS ENGINE · 5 PILLARS',
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 10,
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Zero-Hallucination AI Rewrite',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Front Tilted Card (Terracotta Gradient tilted left with Cropped White Ring)
-                  Transform.translate(
-                    offset: const Offset(-6, -14),
-                    child: Transform.rotate(
-                      angle: -0.12,
-                      child: Container(
-                        width: 270,
-                        height: 162,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFB5462F),
-                              Color(0xFFE06348),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(22),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.terracotta.withValues(alpha: 0.4),
-                              blurRadius: 24,
-                              offset: const Offset(0, 12),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(22),
-                          child: Stack(
-                            children: [
-                              Positioned(
-                                right: -34,
-                                top: 18,
-                                bottom: 18,
-                                child: Container(
-                                  width: 120,
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppColors.white.withValues(alpha: 0.92),
-                                      width: 22,
-                                    ),
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                // Wide Warm Orange/Terracotta Radial Glow Radiating Behind the Card Stack
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: RepaintBoundary(
+                      child: OverflowBox(
+                        maxWidth: 460,
+                        maxHeight: 380,
+                        child: AnimatedBuilder(
+                          animation: Listenable.merge([glowReveal, ambientFloat]),
+                          builder: (context, _) {
+                            final glowT = glowReveal.value;
+                            final glowIntensity =
+                                glowT * (0.88 + (ambientFloat.value * 0.12));
+                            final glowScale =
+                                0.84 + (glowT * 0.16) + (ambientFloat.value * 0.05);
+
+                            return Transform.scale(
+                              scale: glowScale,
+                              child: Container(
+                                width: 440,
+                                height: 360,
+                                decoration: BoxDecoration(
+                                  gradient: RadialGradient(
+                                    center: const Alignment(0.0, 0.0),
+                                    radius: 0.54,
+                                    colors: [
+                                      AppColors.accentGoldBright
+                                          .withValues(alpha: 0.72 * glowIntensity),
+                                      AppColors.terracottaBright
+                                          .withValues(alpha: 0.50 * glowIntensity),
+                                      AppColors.terracotta
+                                          .withValues(alpha: 0.22 * glowIntensity),
+                                      AppColors.terracotta
+                                          .withValues(alpha: 0.06 * glowIntensity),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.34, 0.62, 0.84, 1.0],
                                   ),
                                 ),
                               ),
-                              Padding(
-                                padding: const EdgeInsets.all(18),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'ATS SCORE',
-                                      style: GoogleFonts.jetBrainsMono(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.white.withValues(alpha: 0.8),
-                                      ),
-                                    ),
-                                    const Text(
-                                      '92 / 100',
-                                      style: TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.w900,
-                                        color: AppColors.white,
-                                        letterSpacing: -0.8,
-                                      ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'TAP TO UPLOAD PDF (MAX 4MB)',
-                                          style: GoogleFonts.jetBrainsMono(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.white.withValues(alpha: 0.9),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Global Ready · Zero Bias',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.white.withValues(alpha: 0.8),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 36),
-
-          // 3. Centered Bold Headline & Subtitle (Matched 1:1 to "Easy Way to Save Your Money" in Screen 1)
-          const Text.rich(
-            TextSpan(
-              style: TextStyle(
-                fontSize: 27,
-                fontWeight: FontWeight.w700,
-                height: 1.22,
-                letterSpacing: -0.3,
-              ),
-              children: [
-                TextSpan(
-                  text: 'Pass ATS Before\n',
-                  style: TextStyle(color: AppColors.white),
                 ),
-                TextSpan(
-                  text: 'Getting Rejected',
-                  style: TextStyle(color: AppColors.terracottaBright),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  clipBehavior: Clip.none,
+                  child: SizedBox(
+                    height: 240,
+                    width: 320,
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge([
+                        backCardProgress,
+                        frontCardProgress,
+                        ambientFloat,
+                      ]),
+                      builder: (context, _) {
+                        final backT = backCardProgress.value;
+                        final frontT = frontCardProgress.value;
+                        final drift = (ambientFloat.value - 0.5) * 2.0; // -1..+1
+
+                        final backDx = 8.0 + (1.0 - backT) * 56.0;
+                        final backDy = 24.0 + (1.0 - backT) * 28.0 + (drift * 3.5);
+                        final backAngle =
+                            0.14 + (1.0 - backT) * 0.12 - (drift * 0.01);
+
+                        final frontDx = -8.0 - (1.0 - frontT) * 64.0;
+                        final frontDy =
+                            -16.0 + (1.0 - frontT) * 32.0 - (drift * 4.5);
+                        final frontAngle =
+                            -0.12 - (1.0 - frontT) * 0.12 + (drift * 0.012);
+                        final frontScale = 0.92 + (frontT * 0.08);
+
+                        return Stack(
+                          alignment: Alignment.center,
+                          clipBehavior: Clip.none,
+                          children: [
+                            // Back Tilted Card sliding in from lower-right
+                            Opacity(
+                              opacity: backT.clamp(0.0, 1.0),
+                              child: Transform.translate(
+                                offset: Offset(backDx, backDy),
+                                child: Transform.rotate(
+                                  angle: backAngle,
+                                  child: backCardWidget,
+                                ),
+                              ),
+                            ),
+                            // Front Tilted Card sliding in from lower-left
+                            Opacity(
+                              opacity: frontT.clamp(0.0, 1.0),
+                              child: Transform.translate(
+                                offset: Offset(frontDx, frontDy),
+                                child: Transform.rotate(
+                                  angle: frontAngle,
+                                  child: Transform.scale(
+                                    scale: frontScale,
+                                    child: frontCardWidget,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 12),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              'The best companion to scan your PDF resume, fix fatal ATS flaws, and level up your global career.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13.5,
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
+          const SizedBox(height: 24),
+
+          // 3. Centered Bold Headline & Subtitle sliding smoothly upward
+          AnimatedBuilder(
+            animation: headlineProgress,
+            builder: (context, child) {
+              final t = headlineProgress.value;
+              return Opacity(
+                opacity: t.clamp(0.0, 1.0),
+                child: Transform.translate(
+                  offset: Offset(0, (1.0 - t) * 20.0),
+                  child: child,
+                ),
+              );
+            },
+            child: Column(
+              children: [
+                const Text.rich(
+                  TextSpan(
+                    style: TextStyle(
+                      fontSize: 27,
+                      fontWeight: FontWeight.w700,
+                      height: 1.22,
+                      letterSpacing: -0.3,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'Pass ATS Before\n',
+                        style: TextStyle(color: AppColors.white),
+                      ),
+                      TextSpan(
+                        text: 'Getting Rejected',
+                        style: TextStyle(color: AppColors.terracottaBright),
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'The best companion to scan your PDF resume, fix fatal ATS flaws, and level up your global career.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -457,61 +657,154 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
           const SizedBox(height: 32),
 
-          // 4. Full-Width Stadium Pill CTA Button (Matched 1:1 to "Get Started" pill in Screen 1)
-          SizedBox(
-            width: double.infinity,
-            height: 54,
-            child: ElevatedButton(
-              onPressed: _pickPdfDocument,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.terracotta,
-                foregroundColor: AppColors.white,
-                shape: const StadiumBorder(),
-              ),
-              child: const Text(
-                'Scan CV (PDF) — Free',
-                style: TextStyle(
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w800,
+          // 4. Full-Width Stadium Pill CTA & Demo Buttons sliding smoothly upward
+          AnimatedBuilder(
+            animation: ctaProgress,
+            builder: (context, child) {
+              final t = ctaProgress.value;
+              return Opacity(
+                opacity: t.clamp(0.0, 1.0),
+                child: Transform.translate(
+                  offset: Offset(0, (1.0 - t) * 24.0),
+                  child: child,
                 ),
-              ),
+              );
+            },
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _pickPdfDocument,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.terracotta,
+                      foregroundColor: AppColors.white,
+                      shape: const StadiumBorder(),
+                    ),
+                    child: const Text(
+                      'Scan CV (PDF) — Free',
+                      style: TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => ref
+                          .read(cvScanProvider.notifier)
+                          .runSampleDemoScan(language: 'id'),
+                      icon: const Icon(
+                        Icons.translate_rounded,
+                        size: 16,
+                        color: AppColors.terracottaBright,
+                      ),
+                      label: const Text(
+                        'Demo CV (Indo)',
+                        style: TextStyle(fontSize: 12.5),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => ref
+                          .read(cvScanProvider.notifier)
+                          .runSampleDemoScan(language: 'en'),
+                      icon: const Icon(
+                        Icons.language_rounded,
+                        size: 16,
+                        color: AppColors.terracottaBright,
+                      ),
+                      label: const Text(
+                        'Demo CV (English)',
+                        style: TextStyle(fontSize: 12.5),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // 5. Flat "What the Scanner Audits" Card + Privacy Footnote
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                        child: Text(
+                          'WHAT THE SCANNER AUDITS · 5 PILLARS',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.terracottaBright,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      ),
+                      const Divider(color: AppColors.border, height: 1),
+                      const _AuditPillarRow(
+                        icon: Icons.verified_user_rounded,
+                        accentColor: AppColors.terracottaBright,
+                        title: 'EEOC & Bias Shield',
+                        subtitle:
+                            'Detects page-1 headshots, age, marital status, and personal data risks.',
+                      ),
+                      const Divider(color: AppColors.border, height: 1),
+                      const _AuditPillarRow(
+                        icon: Icons.auto_awesome_rounded,
+                        accentColor: AppColors.accentGoldBright,
+                        title: 'Zero-Hallucination STAR Rewrite',
+                        subtitle:
+                            'Flags weak bullets and inserts [placeholder] metrics instead of fabricating numbers.',
+                      ),
+                      const Divider(color: AppColors.border, height: 1),
+                      const _AuditPillarRow(
+                        icon: Icons.translate_rounded,
+                        accentColor: AppColors.emerald,
+                        title: 'Bilingual ATS Scoring (EN / ID)',
+                        subtitle:
+                            'Auto-detects CV language and benchmarks all 5 global ATS readiness pillars.',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.lock_outline_rounded,
+                      size: 12,
+                      color: AppColors.textDim,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'IN-MEMORY PDF PARSE · MAX 4MB · NO FABRICATED METRICS',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDim,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: [
-              OutlinedButton.icon(
-                onPressed: () => ref
-                    .read(cvScanProvider.notifier)
-                    .runSampleDemoScan(language: 'id'),
-                icon: const Icon(
-                  Icons.translate_rounded,
-                  size: 16,
-                  color: AppColors.terracottaBright,
-                ),
-                label: const Text(
-                  'Demo CV (Indo)',
-                  style: TextStyle(fontSize: 12.5),
-                ),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => ref
-                    .read(cvScanProvider.notifier)
-                    .runSampleDemoScan(language: 'en'),
-                icon: const Icon(
-                  Icons.language_rounded,
-                  size: 16,
-                  color: AppColors.terracottaBright,
-                ),
-                label: const Text(
-                  'Demo CV (English)',
-                  style: TextStyle(fontSize: 12.5),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -532,11 +825,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(
-              width: 60,
-              height: 60,
+              width: 56,
+              height: 56,
               child: CircularProgressIndicator(
                 color: AppColors.terracotta,
-                strokeWidth: 4.5,
+                strokeWidth: 4,
               ),
             ),
             const SizedBox(height: 24),
@@ -575,7 +868,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
       children: [
         // 1. Centered Top Metric Header (Matched to "Total Balance / $1,929.21" in Screen 4)
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           child: Column(
             children: [
               Row(
@@ -584,7 +877,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   Flexible(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
+                        horizontal: 12,
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
@@ -597,10 +890,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                         children: [
                           const Icon(
                             Icons.translate_rounded,
-                            size: 13,
+                            size: 16,
                             color: AppColors.terracottaBright,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Flexible(
                             child: Text(
                               result.isIndonesian
@@ -608,7 +901,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                                   : 'English CV Evaluation',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: GoogleFonts.jetBrainsMono(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.white,
@@ -621,7 +914,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: () => ref.read(cvScanProvider.notifier).resetScanner(),
+                    onTap: () {
+                      ref.read(cvScanProvider.notifier).resetScanner();
+                      _entranceController?.forward(from: 0.0);
+                    },
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -636,7 +932,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                         SizedBox(width: 4),
                         Icon(
                           Icons.refresh_rounded,
-                          size: 14,
+                          size: 16,
                           color: AppColors.terracottaBright,
                         ),
                       ],
@@ -644,7 +940,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               const Text(
                 'Overall ATS Readiness',
                 style: TextStyle(
@@ -656,9 +952,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               const SizedBox(height: 4),
               Text(
                 '${result.overallScore} / 100',
-                style: const TextStyle(
+                style: GoogleFonts.jetBrainsMono(
                   fontSize: 36,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.white,
                   letterSpacing: -1.0,
                 ),
@@ -666,7 +962,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
               const SizedBox(height: 4),
               Text(
                 '${AppColors.getScoreLabel(result.overallScore)} · ${result.issues.length} flaws detected',
-                style: TextStyle(
+                textAlign: TextAlign.center,
+                style: GoogleFonts.jetBrainsMono(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppColors.getScoreColor(result.overallScore),
@@ -682,17 +979,17 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
             width: double.infinity,
             decoration: const BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               border: Border(
                 top: BorderSide(color: AppColors.border, width: 1),
               ),
             ),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 36),
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Unlock Pill Action Bar (Matched to dark pill bar at top of sheet in Screen 5)
+                  // Unlock Pill Action Bar (Single Primary Terracotta CTA when locked)
                   if (!isUnlocked) ...[
                     InkWell(
                       onTap: _showUnlockModal,
@@ -701,7 +998,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
-                          vertical: 13,
+                          vertical: 16,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.terracotta,
@@ -713,12 +1010,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                             Icon(
                               Icons.lock_open_rounded,
                               color: AppColors.white,
-                              size: 17,
+                              size: 20,
                             ),
                             SizedBox(width: 8),
                             Flexible(
                               child: Text(
                                 'Unlock Full Fixes & AI Rewrite (VIP Code)',
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 13,
@@ -731,10 +1029,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                   ],
 
-                  // 2-Column Colored Square Overview Cards (Matched 1:1 to Income / Outcome squares in Screen 4)
+                  // 2-Column Borderless Tonal Overview Tiles (Zero nested borders)
                   const Text(
                     'Overview',
                     style: TextStyle(
@@ -744,99 +1042,129 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: AppColors.terracotta,
-                            borderRadius: BorderRadius.circular(22),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 520),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, t, _) {
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Opacity(
+                              opacity: t.clamp(0.0, 1.0),
+                              child: Transform.translate(
+                                offset: Offset((1.0 - t) * -18.0, (1.0 - t) * 12.0),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceElevated,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.emerald
+                                              .withValues(alpha: 0.16),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.check_circle_outline_rounded,
+                                          color: AppColors.emerald,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        'Matched Skills',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '$matchedCount Keywords',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.jetBrainsMono(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.white.withValues(alpha: 0.18),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.check_circle_outline_rounded,
-                                  color: AppColors.white,
-                                  size: 20,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Opacity(
+                              opacity: t.clamp(0.0, 1.0),
+                              child: Transform.translate(
+                                offset: Offset((1.0 - t) * 18.0, (1.0 - t) * 12.0),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceElevated,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.terracotta
+                                              .withValues(alpha: 0.16),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.warning_amber_rounded,
+                                          color: AppColors.terracottaBright,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        'ATS Flaws',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${result.issues.length} Issues',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.jetBrainsMono(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 18),
-                              Text(
-                                'Matched Skills',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.white.withValues(alpha: 0.8),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '$matchedCount Keywords',
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.white,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceElevated,
-                            borderRadius: BorderRadius.circular(22),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.terracotta.withValues(alpha: 0.16),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.warning_amber_rounded,
-                                  color: AppColors.terracottaBright,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              const Text(
-                                'ATS Flaws',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${result.issues.length} Issues',
-                                style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 24),
+                  const Divider(color: AppColors.border, height: 1),
+                  const SizedBox(height: 24),
 
                   // Diagnostic Issues List
                   const Text(
@@ -854,7 +1182,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                       onUnlockTap: isUnlocked ? null : _showUnlockModal,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
                   // AI Zero-Hallucination Rewrite Section
                   _buildRewriteSection(scanState),
@@ -869,119 +1197,129 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
 
   Widget _buildRewriteSection(CvScanState scanState) {
     final cv = scanState.rewrittenCv;
+    final isUnlocked = scanState.analysisResult?.isUnlocked ?? false;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.terracotta.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.auto_awesome_rounded, color: AppColors.terracottaBright),
-              SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'AI Zero-Hallucination Resume Rewrite',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.white,
-                      ),
-                    ),
-                    Text(
-                      'Single-column English STAR format with [placeholder] tags (+150 XP)',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (cv == null)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () =>
-                    ref.read(cvScanProvider.notifier).generateAiRewrite(),
-                child: const Text('Rewrite CV Automatically (+150 XP)'),
-              ),
-            )
-          else ...[
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.border),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(color: AppColors.border, height: 1),
+        const SizedBox(height: 24),
+        const Row(
+          children: [
+            Icon(Icons.auto_awesome_rounded, color: AppColors.terracottaBright),
+            SizedBox(width: 8),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    cv.name,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
+                    'AI Zero-Hallucination Resume Rewrite',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
                       color: AppColors.white,
                     ),
                   ),
+                  SizedBox(height: 4),
                   Text(
-                    cv.title,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.terracottaBright,
-                    ),
-                  ),
-                  const Divider(height: 20),
-                  PlaceholderRichText(text: cv.summary),
-                  const SizedBox(height: 12),
-                  ...cv.sections.map(
-                    (sec) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            sec.heading.toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.white,
-                              letterSpacing: 0.7,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          ...sec.bullets.map(
-                            (b) => Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: PlaceholderRichText(text: '• $b'),
-                            ),
-                          ),
-                        ],
-                      ),
+                    'Single-column STAR format with [placeholder] tags (+150 XP)',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 8,
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (cv == null)
+          SizedBox(
+            width: double.infinity,
+            child: isUnlocked
+                ? ElevatedButton(
+                    onPressed: () =>
+                        ref.read(cvScanProvider.notifier).generateAiRewrite(),
+                    child: const Text(
+                      'Rewrite CV Automatically (+150 XP)',
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : OutlinedButton(
+                    onPressed: () =>
+                        ref.read(cvScanProvider.notifier).generateAiRewrite(),
+                    child: const Text(
+                      'Rewrite CV Automatically (+150 XP)',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+          )
+        else ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  cv.name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.white,
+                  ),
+                ),
+                Text(
+                  cv.title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.terracottaBright,
+                  ),
+                ),
+                const Divider(color: AppColors.border, height: 24),
+                PlaceholderRichText(text: cv.summary),
+                const SizedBox(height: 12),
+                ...cv.sections.map(
+                  (sec) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          sec.heading.toUpperCase(),
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...sec.bullets.map(
+                          (b) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: PlaceholderRichText(text: '• $b'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              if (isUnlocked)
                 ElevatedButton.icon(
                   onPressed: () async {
                     final savedPath =
@@ -994,25 +1332,103 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.download_rounded, size: 17),
+                  icon: const Icon(Icons.download_rounded, size: 16),
                   label: const Text('Download PDF CV (.pdf)'),
-                ),
+                )
+              else
                 OutlinedButton.icon(
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: cv.toMarkdown()));
+                  onPressed: () async {
+                    final savedPath =
+                        await PdfCvGenerator.exportAndDownloadPdf(cv);
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('CV text copied to clipboard!'),
+                      SnackBar(
+                        content: Text('PDF CV saved locally to $savedPath!'),
                         backgroundColor: AppColors.emerald,
                       ),
                     );
                   },
-                  icon: const Icon(Icons.copy_rounded, size: 16),
-                  label: const Text('Copy Text'),
+                  icon: const Icon(Icons.download_rounded, size: 16),
+                  label: const Text('Download PDF CV (.pdf)'),
+                ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: cv.toMarkdown()));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('CV text copied to clipboard!'),
+                      backgroundColor: AppColors.emerald,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.copy_rounded, size: 16),
+                label: const Text('Copy Text'),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AuditPillarRow extends StatelessWidget {
+  final IconData icon;
+  final Color accentColor;
+  final String title;
+  final String subtitle;
+
+  const _AuditPillarRow({
+    required this.icon,
+    required this.accentColor,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 16,
+              color: accentColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
-          ],
+          ),
         ],
       ),
     );

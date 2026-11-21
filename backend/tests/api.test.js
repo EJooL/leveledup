@@ -2,6 +2,12 @@ const http = require('http');
 const app = require('../server');
 const { pool } = require('../config/db');
 const { runGuardrailTests } = require('./aiGuardrails.test');
+const {
+  analyzeCv,
+  clearAnalysisCache,
+  computeCvContentHash,
+  calculateAtsScore,
+} = require('../services/aiAnalysisService');
 
 const SAMPLE_PDF = `%PDF-1.4
 1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
@@ -503,6 +509,216 @@ Node.js, Express, MySQL, JavaScript, Git, Docker, REST API, CI/CD, Unit Testing,
     // TESTS 8-10: AI Guardrails, Schema Compliance & Bilingual Parity
     // -----------------------------------------------------------------
     await runGuardrailTests(assert);
+
+    // -----------------------------------------------------------------
+    // TEST 11: Deterministic ATS Scoring, Gemini Temp=0 & SHA-256 Anchor
+    // -----------------------------------------------------------------
+    console.log('\n🔹 Test 11: Deterministic ATS Scoring, Gemini Sampling Lock & Exact-Content Anchor');
+
+    clearAnalysisCache();
+
+    const STRONG_EN_CV = `
+Alex Pratama
+Senior Backend Engineer
+Email: alex.pratama@example.com | Jakarta, Indonesia | github.com/alexpratama | linkedin.com/in/alexpratama
+
+Summary:
+Backend Engineer with 4+ years building high-throughput Node.js, Express, MySQL, Redis, and Docker microservices.
+
+Experience:
+PT Nusantara Cloud (2022 - Present)
+Senior Backend Engineer
+- Architected Node.js and Express REST APIs serving 120,000+ daily active users with 99.95% uptime.
+- Optimized MySQL database indexing and Redis caching layers, cutting p95 API latency by 48%.
+- Built CI/CD pipelines and automated unit testing with Docker, reducing deployment rollbacks by 65%.
+
+Education:
+B.S. in Computer Science - Universitas Indonesia (2021)
+
+Skills:
+Node.js, Express, MySQL, PostgreSQL, Docker, REST API, Redis, Microservices, Authentication, Database Indexing, Git, CI/CD
+`;
+
+    // 11a. Verify Gemini config locks temperature=0 and topP=0.1, and ignores raw LLM score
+    let capturedConfig = null;
+    let mockCalls = 0;
+    const noisyMockClient = {
+      models: {
+        generateContent: async ({ config }) => {
+          mockCalls++;
+          capturedConfig = config;
+          if (mockCalls === 1) {
+            return {
+              text: JSON.stringify({
+                mode: 'global',
+                language: 'en',
+                overallScore: 76, // Intentionally inconsistent raw LLM score
+                summary: 'This CV stands out due to its exceptional use of quantified engineering metrics.',
+                issues: [
+                  {
+                    id: 'minor_polish_1',
+                    category: 'language_quality',
+                    severity: 'suggestion',
+                    title: 'Tighten summary sentence',
+                    detail: 'Optional polish.',
+                    fix: 'Trim 3 words.',
+                    rewrite: { before: 'Backend Engineer', after: 'Senior Backend Engineer' },
+                  },
+                  {
+                    id: 'minor_polish_2',
+                    category: 'language_quality',
+                    severity: 'suggestion',
+                    title: 'Add GitHub link to project bullets',
+                    detail: 'Optional polish.',
+                    fix: 'Link key repository.',
+                    rewrite: { before: 'Built CI/CD pipelines', after: 'Built CI/CD pipelines (github.com/alexpratama)' },
+                  },
+                ],
+                keywordMatch: {
+                  jobTitle: 'Backend Engineer',
+                  matched: ['Node.js', 'Express', 'MySQL', 'Docker', 'REST API', 'Redis', 'Microservices'],
+                  missing: [],
+                  missingCount: 0,
+                },
+              }),
+            };
+          }
+          // Second call (if cache were broken) would return wildly different score/issues
+          return {
+            text: JSON.stringify({
+              mode: 'global',
+              language: 'en',
+              overallScore: 55,
+              summary: 'Drifted response that must never override anchored evaluation.',
+              issues: [
+                {
+                  id: 'drifted_issue',
+                  category: 'achievements',
+                  severity: 'critical',
+                  title: 'Drifted issue',
+                  detail: 'Should never be returned.',
+                  fix: 'N/A',
+                  rewrite: { before: 'a', after: 'b' },
+                },
+              ],
+              keywordMatch: { jobTitle: 'Backend Engineer', matched: ['Node.js'], missing: ['Docker'], missingCount: 1 },
+            }),
+          };
+        },
+      },
+    };
+
+    const detRun1 = await analyzeCv(STRONG_EN_CV, 'Alex_CV.pdf', {
+      hasPhoto: false,
+      mode: 'global',
+      _aiClient: noisyMockClient,
+    });
+    // Re-upload identical content with CRLF / extra trailing spaces
+    const detRun2 = await analyzeCv(STRONG_EN_CV.replace(/\n/g, '\r\n') + '   ', 'Alex_CV_reupload.pdf', {
+      hasPhoto: false,
+      mode: 'global',
+      _aiClient: noisyMockClient,
+    });
+
+    assert(
+      capturedConfig && capturedConfig.temperature === 0 && capturedConfig.topP === 0.1,
+      `Gemini analysis locks deterministic sampling (temperature=${capturedConfig?.temperature}, topP=${capturedConfig?.topP})`
+    );
+    assert(
+      detRun1.overallScore === 94,
+      `calculateAtsScore overrides inconsistent LLM raw score (76) with deterministic math (Expected 94, Got ${detRun1.overallScore})`
+    );
+    assert(
+      mockCalls === 1 &&
+        detRun2.overallScore === detRun1.overallScore &&
+        detRun2.meta.cachedAnchor === true &&
+        detRun2.meta.contentHash === detRun1.meta.contentHash,
+      'Exact same normalized CV re-upload hits SHA-256 anchor with identical score and zero drift'
+    );
+
+    // 11b. Verify SHA-256 hash sensitivity to hasPhoto and region/mode
+    const hashGlobalNoPhoto = computeCvContentHash({ text: STRONG_EN_CV, mode: 'global', hasPhoto: false });
+    const hashGlobalPhoto = computeCvContentHash({ text: STRONG_EN_CV, mode: 'global', hasPhoto: true });
+    const hashIdNoPhoto = computeCvContentHash({ text: STRONG_EN_CV, mode: 'id', hasPhoto: false });
+    assert(
+      hashGlobalNoPhoto !== hashGlobalPhoto && hashGlobalNoPhoto !== hashIdNoPhoto,
+      'SHA-256 contentHash changes cleanly when hasPhoto or market/region changes'
+    );
+
+    // 11c. Verify shared calculateAtsScore caps cumulative suggestion penalties at -12
+    const sixSuggestionsScore = calculateAtsScore({
+      issues: Array.from({ length: 6 }, (_, idx) => ({
+        id: `tip_${idx}`,
+        category: 'language_quality',
+        severity: 'suggestion',
+      })),
+      matchedKeywords: ['Node.js', 'MySQL', 'Docker'],
+      missingKeywords: ['Redis'],
+      hasPhoto: false,
+    });
+    assert(
+      sixSuggestionsScore === 88,
+      `calculateAtsScore caps minor suggestion deductions at -12 (Expected 88, Got ${sixSuggestionsScore})`
+    );
+
+    // 11d. End-to-end HTTP POST /api/analyze determinism across hot cache AND simulated server restart (DB anchor)
+    clearAnalysisCache();
+    const detDeviceId = `device-det-${Date.now()}`;
+    const httpScan1 = await makeRequest(
+      port,
+      '/api/analyze',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': detDeviceId },
+      JSON.stringify({
+        text: STRONG_EN_CV,
+        fileName: 'Alex_CV.pdf',
+        deviceId: detDeviceId,
+        hasPhoto: false,
+        mode: 'global',
+      })
+    );
+    const httpScan2 = await makeRequest(
+      port,
+      '/api/analyze',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': detDeviceId },
+      JSON.stringify({
+        text: STRONG_EN_CV,
+        fileName: 'Alex_CV.pdf',
+        deviceId: detDeviceId,
+        hasPhoto: false,
+        mode: 'global',
+      })
+    );
+    // Simulate server restart by clearing in-memory cache; route must still anchor via MySQL
+    clearAnalysisCache();
+    const httpScan3AfterRestart = await makeRequest(
+      port,
+      '/api/analyze',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': detDeviceId },
+      JSON.stringify({
+        text: STRONG_EN_CV,
+        fileName: 'Alex_CV.pdf',
+        deviceId: detDeviceId,
+        hasPhoto: false,
+        mode: 'global',
+      })
+    );
+
+    assert(
+      httpScan1.status === 200 &&
+        httpScan2.status === 200 &&
+        httpScan3AfterRestart.status === 200 &&
+        httpScan1.body.result.overallScore === httpScan2.body.result.overallScore &&
+        httpScan2.body.result.overallScore === httpScan3AfterRestart.body.result.overallScore,
+      `Back-to-back POST /api/analyze scans of identical CV return identical score (${httpScan1.body.result?.overallScore} -> ${httpScan2.body.result?.overallScore} -> ${httpScan3AfterRestart.body.result?.overallScore})`
+    );
+    assert(
+      httpScan1.body.result.meta.contentHash === httpScan3AfterRestart.body.result.meta.contentHash &&
+        httpScan3AfterRestart.body.result.meta.cachedAnchor === true,
+      'Cold-restart POST /api/analyze anchors via MySQL SHA-256 contentHash with zero score drift'
+    );
 
   } finally {
     server.close();

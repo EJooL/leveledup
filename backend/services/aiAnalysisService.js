@@ -4,8 +4,60 @@ const { validateCvText, normalizeLanguage } = require('./bilingualValidation');
 const {
   generateJsonWithGemini,
   hasExplicitPhotoEvidence,
+  computeCvContentHash,
+  calculateAtsScore,
   sanitizeAnalysisResult,
 } = require('./aiGuardrails');
+
+const ANALYSIS_TEMPERATURE = 0;
+const ANALYSIS_TOP_P = 0.1;
+const MAX_CACHE_ENTRIES = 250;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+// Bounded in-memory SHA-256 consistency cache to prevent phantom score drift on unchanged CVs
+const analysisCache = new Map();
+
+function cloneResult(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function getCachedAnalysis(cacheKey, fileName) {
+  const entry = analysisCache.get(cacheKey);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    analysisCache.delete(cacheKey);
+    return null;
+  }
+  // Refresh LRU order
+  analysisCache.delete(cacheKey);
+  analysisCache.set(cacheKey, entry);
+
+  const cloned = cloneResult(entry.result);
+  if (cloned.meta) {
+    cloned.meta.fileName = fileName;
+    cloned.meta.cachedAnchor = true;
+  }
+  return cloned;
+}
+
+function setCachedAnalysis(cacheKey, result) {
+  if (analysisCache.has(cacheKey)) {
+    analysisCache.delete(cacheKey);
+  } else if (analysisCache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = analysisCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      analysisCache.delete(oldestKey);
+    }
+  }
+  analysisCache.set(cacheKey, {
+    timestamp: Date.now(),
+    result: cloneResult(result),
+  });
+}
+
+function clearAnalysisCache() {
+  analysisCache.clear();
+}
 
 function buildSystemInstruction(lang, hasPhoto) {
   const isId = lang === 'id';
@@ -31,6 +83,11 @@ Evaluate the candidate's CV strictly according to 5 ATS Pillars:
 4. achievements: Flag passive duties ("Responsible for...", "Bertanggung jawab...") or missing quantified metrics that lack the STAR method (Action Verb + Context + Quantified Metric).
 5. language_quality: Flag generic summaries, stiff phrasing, passive voice, and clichés ("hard working", "pekerja keras", "under pressure", "di bawah tekanan").
 
+STRICT SEVERITY DEFINITIONS (DO NOT INFLATE SEVERITY):
+- \`critical\`: ONLY for objective ATS/EEOC rejection blockers explicitly found in the CV (\`photo\` when \`hasPhoto=true\`, \`dob_age\`, \`marital_status\`, \`religion\`, \`national_id\`, or severely broken/unreadable structure). NEVER mark wording polish, keyword gaps, or minor bullet improvements as \`critical\`.
+- \`warning\`: Objective structural or content gaps (\`too_short\` < 150 words, \`duties\` using passive "Responsible for..." phrasing, \`no_metrics\` when quantifiable results are absent across the CV, or \`missing_core_keywords\` when >= 4 core role skills are missing).
+- \`suggestion\`: Optional polish improvements (\`cliche_words\`, tightening already-strong bullets, minor phrasing/formatting tweaks). For an already strong, metric-rich CV, report ONLY genuine \`suggestion\` items (or an empty \`issues\` array if none apply).
+
 PREFERRED CANONICAL ISSUE IDs (use when applicable):
 - \`photo\`, \`dob_age\`, \`marital_status\`, \`religion\`, \`national_id\`
 - \`too_short\`, \`duties\`, \`no_metrics\`, \`cliche_words\`, \`missing_core_keywords\`
@@ -38,17 +95,14 @@ PREFERRED CANONICAL ISSUE IDs (use when applicable):
 ZERO-HALLUCINATION POLICY FOR REWRITES:
 Do NOT fabricate numbers, metrics, tools, companies, or factual statements not present in the CV. When giving rewrite suggestions without existing metrics, you MUST use square bracket placeholders like ${isId ? '[X]% atau [jumlah]' : '[X]% or [number]'}.
 
-SCORING RULES:
-- Initial score: 100
-- Deduct: critical = -11, warning = -7, suggestion = -3
-- Minimum score capped at 10.
+DETERMINISTIC SCORING NOTE:
+- The backend computes the final numeric 0-100 score deterministically from your structured \`issues\` and \`keywordMatch\` (\`critical = -11\`, \`warning = -7\`, \`suggestion = -3\`). Focus strictly on accurate, consistent issue detection, severity classification, keywords, and summary tone that matches your findings.
 
 Return ONLY a valid JSON object matching this schema:
 {
   "mode": "global",
   "language": "${lang}",
-  "overallScore": number,
-  "summary": "string in ${langName} explaining the overall readiness",
+  "summary": "string in ${langName} explaining the overall readiness consistent with the issues listed",
   "issues": [
     {
       "id": "canonical_issue_key",
@@ -73,10 +127,12 @@ Return ONLY a valid JSON object matching this schema:
 }
 
 /**
- * Analyze CV text using Gemini (matching CV language: 'en' or 'id') or fallback to Rule-Based engine
+ * Analyze CV text using Gemini (matching CV language: 'en' or 'id') or fallback to Rule-Based engine.
+ * Enforces deterministic Gemini sampling (temperature=0, topP=0.1), deterministic JS scoring via
+ * calculateAtsScore, and SHA-256 exact-content anchoring to eliminate score drift on identical CVs.
  * @param {string} text - CV text
  * @param {string} fileName - Uploaded file name
- * @param {object} options - { hasPhoto?: boolean, language?: string, _aiClient?: object, models?: string[], timeoutMs?: number }
+ * @param {object} options - { hasPhoto?: boolean, language?: string, mode?: string, region?: string, bypassCache?: boolean, _aiClient?: object, models?: string[], timeoutMs?: number }
  * @returns {Promise<object>} Analysis result
  */
 async function analyzeCv(text, fileName = 'CV.pdf', options = {}) {
@@ -85,14 +141,36 @@ async function analyzeCv(text, fileName = 'CV.pdf', options = {}) {
   });
   const lang = normalizeLanguage(options.language, cleanText) || language;
   const hasPhoto = hasExplicitPhotoEvidence(cleanText, options);
+  const mode = options.mode || 'global';
+  const region = options.region || null;
+  const contentHash = computeCvContentHash({
+    text: cleanText,
+    mode,
+    region,
+    hasPhoto,
+  });
+  const cacheKey = `${contentHash}:${lang}`;
+
+  if (!options.bypassCache) {
+    const cached = getCachedAnalysis(cacheKey, fileName);
+    if (cached) {
+      return cached;
+    }
+  }
+
   const aiClient = options._aiClient || (isAiAvailable() ? ai : null);
 
   if (!aiClient) {
-    return analyzeWithRules(cleanText, fileName, { hasPhoto, language: lang });
+    const ruleResult = analyzeWithRules(cleanText, fileName, { hasPhoto, language: lang });
+    if (ruleResult.meta) {
+      ruleResult.meta.contentHash = contentHash;
+      ruleResult.meta.cachedAnchor = false;
+    }
+    return ruleResult;
   }
 
   try {
-    const prompt = `Analyze the following CV content (Detected Language: ${lang === 'id' ? 'Bahasa Indonesia' : 'English'}, PDF Embedded Photo Detected: ${hasPhoto}):\n\n=== CV START ===\n${cleanText}\n=== CV END ===`;
+    const prompt = `Analyze the following CV content (Detected Language: ${lang === 'id' ? 'Bahasa Indonesia' : 'English'}, Market/Region: ${region || mode}, PDF Embedded Photo Detected: ${hasPhoto}):\n\n=== CV START ===\n${cleanText}\n=== CV END ===`;
 
     const { parsed } = await generateJsonWithGemini({
       aiClient,
@@ -100,9 +178,11 @@ async function analyzeCv(text, fileName = 'CV.pdf', options = {}) {
       systemInstruction: buildSystemInstruction(lang, hasPhoto),
       models: options.models,
       timeoutMs: options.timeoutMs,
+      temperature: ANALYSIS_TEMPERATURE,
+      topP: ANALYSIS_TOP_P,
     });
 
-    return sanitizeAnalysisResult(parsed, {
+    const sanitized = sanitizeAnalysisResult(parsed, {
       text: cleanText,
       fileName,
       lang,
@@ -111,15 +191,34 @@ async function analyzeCv(text, fileName = 'CV.pdf', options = {}) {
       inferJobRole,
       analyzeKeywords,
     });
+
+    sanitized.meta.contentHash = contentHash;
+    sanitized.meta.cachedAnchor = false;
+
+    if (!options.bypassCache) {
+      setCachedAnalysis(cacheKey, sanitized);
+    }
+
+    return sanitized;
   } catch (err) {
     console.warn(
       `[AI Analysis Warning] Gemini API call failed: ${err.message}. Falling back to Rule-Based engine.`
     );
-    return analyzeWithRules(cleanText, fileName, { hasPhoto, language: lang });
+    const fallbackResult = analyzeWithRules(cleanText, fileName, { hasPhoto, language: lang });
+    if (fallbackResult.meta) {
+      fallbackResult.meta.contentHash = contentHash;
+      fallbackResult.meta.cachedAnchor = false;
+    }
+    return fallbackResult;
   }
 }
 
 module.exports = {
   analyzeCv,
   buildSystemInstruction,
+  clearAnalysisCache,
+  computeCvContentHash,
+  calculateAtsScore,
+  ANALYSIS_TEMPERATURE,
+  ANALYSIS_TOP_P,
 };

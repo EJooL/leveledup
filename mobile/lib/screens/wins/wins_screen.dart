@@ -154,29 +154,30 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
       color: AppColors.background,
       child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 36),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Header
+              // 1. Header & Logged Wins Counter
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'LIVING CV · BRAG DOC',
-                          style: TextStyle(
+                          style: GoogleFonts.jetBrainsMono(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                             color: AppColors.terracottaBright,
                             letterSpacing: 0.7,
                           ),
                         ),
-                        SizedBox(height: 2),
-                        Text(
+                        const SizedBox(height: 4),
+                        const Text(
                           'Log Wins → STAR CV',
                           style: TextStyle(
                             fontSize: 24,
@@ -188,10 +189,11 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 11,
-                      vertical: 6,
+                      horizontal: 12,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceElevated,
@@ -209,7 +211,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               const Text(
                 'Record achievements from any role (Data, Marketing, Finance, Design, HR, Engineering). Gemini turns each win into a Zero-Hallucination STAR bullet you can merge directly into your PDF CV.',
                 style: TextStyle(
@@ -222,52 +224,61 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
 
               // 2. Log Win Form Card
               Container(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.border),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Log a New Achievement',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.white,
+                    SizedBox(
+                      width: double.infinity,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Text(
+                            'Log a New Achievement',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.white,
+                            ),
                           ),
-                        ),
-                        // Language pill selector
-                        Row(
-                          children: [
-                            _LangPill(
-                              label: 'Auto',
-                              selected: _selectedLang == 'auto',
-                              onTap: () =>
-                                  setState(() => _selectedLang = 'auto'),
-                            ),
-                            const SizedBox(width: 4),
-                            _LangPill(
-                              label: 'EN',
-                              selected: _selectedLang == 'en',
-                              onTap: () => setState(() => _selectedLang = 'en'),
-                            ),
-                            const SizedBox(width: 4),
-                            _LangPill(
-                              label: 'ID',
-                              selected: _selectedLang == 'id',
-                              onTap: () => setState(() => _selectedLang = 'id'),
-                            ),
-                          ],
-                        ),
-                      ],
+                          // Language pill selector
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _LangPill(
+                                label: 'Auto',
+                                selected: _selectedLang == 'auto',
+                                onTap: () =>
+                                    setState(() => _selectedLang = 'auto'),
+                              ),
+                              const SizedBox(width: 4),
+                              _LangPill(
+                                label: 'EN',
+                                selected: _selectedLang == 'en',
+                                onTap: () =>
+                                    setState(() => _selectedLang = 'en'),
+                              ),
+                              const SizedBox(width: 4),
+                              _LangPill(
+                                label: 'ID',
+                                selected: _selectedLang == 'id',
+                                onTap: () =>
+                                    setState(() => _selectedLang = 'id'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: _titleCtrl,
                       style: const TextStyle(
@@ -294,11 +305,11 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                             'e.g. +32% organic leads · cut closing time by 2 days',
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    const Text(
+                    const SizedBox(height: 16),
+                    Text(
                       'CATEGORY (ALL FIELDS)',
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textSecondary,
                         letterSpacing: 0.6,
@@ -313,11 +324,20 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                         return ChoiceChip(
                           label: Text(branch.title),
                           selected: isSel,
+                          showCheckmark: false,
                           onSelected: (_) =>
                               setState(() => _selectedBranch = branch),
                           selectedColor:
-                              AppColors.terracotta.withValues(alpha: 0.24),
+                              AppColors.terracotta.withValues(alpha: 0.22),
                           backgroundColor: AppColors.surfaceElevated,
+                          side: BorderSide(
+                            color: isSel
+                                ? AppColors.terracotta
+                                : AppColors.border,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
                           labelStyle: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
@@ -334,6 +354,12 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                       height: 48,
                       child: ElevatedButton.icon(
                         onPressed: _isSavingWin ? null : _handleSaveWin,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
                         icon: _isSavingWin
                             ? const SizedBox(
                                 width: 16,
@@ -343,11 +369,13 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                   color: AppColors.white,
                                 ),
                               )
-                            : const Icon(Icons.auto_awesome_rounded, size: 18),
+                            : const Icon(Icons.auto_awesome_rounded, size: 20),
                         label: Text(
                           _isSavingWin
                               ? 'Generating STAR Bullet...'
                               : 'Convert to STAR Bullet & Save Win',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ),
@@ -357,7 +385,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
               ),
               const SizedBox(height: 24),
 
-              // 4. Saved Wins List + "Add to my CV" Action
+              // 3. Saved Wins List + "Add to my CV" Secondary Action
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -371,7 +399,8 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                       ),
                     ),
                   ),
-                  if (wins.isNotEmpty)
+                  if (wins.isNotEmpty) ...[
+                    const SizedBox(width: 8),
                     TextButton(
                       onPressed: () {
                         setState(() {
@@ -395,6 +424,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                         ),
                       ),
                     ),
+                  ],
                 ],
               ),
               const SizedBox(height: 8),
@@ -402,20 +432,20 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
               if (wins.isEmpty)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(22),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.border),
                   ),
                   child: const Column(
                     children: [
                       Icon(
-                        Icons.emoji_events_outlined,
+                        Icons.emoji_events_rounded,
                         color: AppColors.textMuted,
                         size: 32,
                       ),
-                      SizedBox(height: 10),
+                      SizedBox(height: 12),
                       Text(
                         'No wins logged yet',
                         style: TextStyle(
@@ -442,159 +472,170 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                   final isSelected = _selectedWinIds.contains(win.id);
                   final accent = CareerIcons.forBranchAccent(win.branch);
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Material(
                       color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.terracotta
-                            : win.isMerged
-                                ? AppColors.emerald.withValues(alpha: 0.4)
-                                : AppColors.border,
-                        width: isSelected ? 1.4 : 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: isSelected
+                              ? AppColors.terracotta
+                              : win.isMerged
+                                  ? AppColors.emerald.withValues(alpha: 0.45)
+                                  : AppColors.border,
+                          width: isSelected ? 1.5 : 1,
+                        ),
                       ),
-                    ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedWinIds.remove(win.id);
-                          } else {
-                            _selectedWinIds.add(win.id);
-                          }
-                        });
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  isSelected
-                                      ? Icons.check_box_rounded
-                                      : Icons.check_box_outline_blank_rounded,
-                                  color: isSelected
-                                      ? AppColors.terracottaBright
-                                      : AppColors.textMuted,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 10),
-                                CareerIconBadge(
-                                  icon: CareerIcons.forBranch(win.branch),
-                                  accentColor: accent,
-                                  size: 36,
-                                  radius: 10,
-                                  iconSize: 17,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        win.title,
-                                        style: const TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.white,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        '${win.branch.title} · ${win.dateLabel}',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.textMuted,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (win.isMerged)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.emerald
-                                          .withValues(alpha: 0.16),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: const Text(
-                                      'In CV',
-                                      style: TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.emerald,
-                                      ),
-                                    ),
-                                  ),
-                                IconButton(
-                                  tooltip: 'Copy STAR bullet',
-                                  onPressed: () {
-                                    Clipboard.setData(
-                                      ClipboardData(text: win.toStarBullet()),
-                                    );
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'STAR bullet copied to clipboard!',
-                                        ),
-                                        backgroundColor: AppColors.emerald,
-                                        duration: Duration(seconds: 1),
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(
-                                    Icons.copy_rounded,
-                                    size: 17,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceElevated,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.border),
-                              ),
-                              child: Column(
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            if (isSelected) {
+                              _selectedWinIds.remove(win.id);
+                            } else {
+                              _selectedWinIds.add(win.id);
+                            }
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    win.language == 'id'
-                                        ? 'POIN STAR (ANTI-HALUSINASI)'
-                                        : 'STAR CV BULLET (ZERO-HALLUCINATION)',
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.terracottaBright,
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Icon(
+                                      isSelected
+                                          ? Icons.check_box_rounded
+                                          : Icons
+                                              .check_box_outline_blank_rounded,
+                                      color: isSelected
+                                          ? AppColors.terracottaBright
+                                          : AppColors.textMuted,
+                                      size: 20,
                                     ),
                                   ),
-                                  const SizedBox(height: 5),
-                                  PlaceholderRichText(
-                                    text: '• ${win.toStarBullet()}',
-                                    baseStyle: const TextStyle(
-                                      fontSize: 12.5,
-                                      color: AppColors.white,
-                                      height: 1.45,
+                                  const SizedBox(width: 12),
+                                  CareerIconBadge(
+                                    icon: CareerIcons.forBranch(win.branch),
+                                    accentColor: accent,
+                                    size: 40,
+                                    radius: 12,
+                                    iconSize: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          win.title,
+                                          style: const TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${win.branch.title} · ${win.dateLabel}',
+                                          style: GoogleFonts.jetBrainsMono(
+                                            fontSize: 10.5,
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    tooltip: 'Copy STAR bullet',
+                                    constraints: const BoxConstraints(),
+                                    padding: const EdgeInsets.all(8),
+                                    onPressed: () {
+                                      Clipboard.setData(
+                                        ClipboardData(text: win.toStarBullet()),
+                                      );
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'STAR bullet copied to clipboard!',
+                                          ),
+                                          backgroundColor: AppColors.emerald,
+                                          duration: Duration(seconds: 1),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.copy_rounded,
+                                      size: 16,
+                                      color: AppColors.textSecondary,
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
+                              const Divider(
+                                color: AppColors.border,
+                                height: 24,
+                              ),
+                              SizedBox(
+                                width: double.infinity,
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      win.language == 'id'
+                                          ? 'POIN STAR (ANTI-HALUSINASI)'
+                                          : 'STAR CV BULLET (ZERO-HALLUCINATION)',
+                                      style: GoogleFonts.jetBrainsMono(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.terracottaBright,
+                                      ),
+                                    ),
+                                    if (win.isMerged)
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.check_circle_rounded,
+                                            size: 12,
+                                            color: AppColors.emerald,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'IN CV',
+                                            style: GoogleFonts.jetBrainsMono(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppColors.emerald,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              PlaceholderRichText(
+                                text: '• ${win.toStarBullet()}',
+                                baseStyle: const TextStyle(
+                                  fontSize: 12.5,
+                                  color: AppColors.white,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -602,33 +643,47 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                 }),
                 const SizedBox(height: 8),
 
-                // "Add to my CV" Primary Action Button
+                // Secondary Merge Action Button (preserves single Terracotta CTA rule)
                 SizedBox(
                   width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton.icon(
+                  height: 48,
+                  child: OutlinedButton.icon(
                     onPressed: _isMergingCv ? null : _handleMergeIntoCv,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.terracotta,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: AppColors.surfaceElevated,
                       foregroundColor: AppColors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      side: const BorderSide(
+                        color: AppColors.terracotta,
+                        width: 1.5,
+                      ),
                       shape: const StadiumBorder(),
                     ),
                     icon: _isMergingCv
                         ? const SizedBox(
-                            width: 18,
-                            height: 18,
+                            width: 16,
+                            height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.white,
+                              color: AppColors.terracottaBright,
                             ),
                           )
-                        : const Icon(Icons.post_add_rounded, size: 20),
+                        : const Icon(
+                            Icons.post_add_rounded,
+                            size: 20,
+                            color: AppColors.terracottaBright,
+                          ),
                     label: Text(
                       _selectedWinIds.isNotEmpty
                           ? 'Add Selected to My CV (${_selectedWinIds.length})'
                           : 'Add Recent Wins to My CV',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 14.5,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -636,14 +691,14 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                 ),
               ],
 
-              // 5. Living CV Preview & 1-Tap PDF Export Card
+              // 4. Living CV Preview & 1-Tap PDF Export Card
               if (activeLivingCv != null) ...[
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
                 Container(
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: AppColors.emerald.withValues(alpha: 0.45),
                     ),
@@ -673,7 +728,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Text(
                         '${activeLivingCv.name} · ${activeLivingCv.title}',
                         style: const TextStyle(
@@ -682,8 +737,11 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 12),
                       if (activeLivingCv.sections.isNotEmpty) ...[
+                        const Divider(
+                          color: AppColors.border,
+                          height: 24,
+                        ),
                         Text(
                           activeLivingCv.sections.first.heading.toUpperCase(),
                           style: GoogleFonts.jetBrainsMono(
@@ -692,42 +750,53 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                             color: AppColors.terracottaBright,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
                         ...activeLivingCv.sections.first.bullets
                             .take(4)
                             .map((b) {
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.only(bottom: 8),
                             child: PlaceholderRichText(
                               text: '• $b',
                               baseStyle: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.white,
-                                height: 1.4,
+                                height: 1.45,
                               ),
                             ),
                           );
                         }),
                       ],
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
                         height: 48,
-                        child: ElevatedButton.icon(
+                        child: OutlinedButton.icon(
                           onPressed: () => _handleExportPdf(activeLivingCv),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.emerald,
-                            foregroundColor: AppColors.white,
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor:
+                                AppColors.emerald.withValues(alpha: 0.14),
+                            foregroundColor: AppColors.emerald,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            side: const BorderSide(
+                              color: AppColors.emerald,
+                              width: 1.5,
+                            ),
                             shape: const StadiumBorder(),
                           ),
                           icon: const Icon(
                             Icons.download_rounded,
-                            size: 19,
+                            size: 20,
                           ),
                           label: Text(
                             activeLivingCv.isIndonesian
                                 ? 'Simpan PDF CV Terbaru (.pdf)'
                                 : 'Download Updated PDF CV (.pdf)',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w800,
@@ -763,9 +832,11 @@ class _LangPill extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: selected ? AppColors.terracotta : AppColors.surfaceElevated,
+          color: selected
+              ? AppColors.terracotta.withValues(alpha: 0.22)
+              : AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: selected ? AppColors.terracotta : AppColors.border,
@@ -776,7 +847,9 @@ class _LangPill extends StatelessWidget {
           style: GoogleFonts.jetBrainsMono(
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
-            color: selected ? AppColors.white : AppColors.textSecondary,
+            color: selected
+                ? AppColors.terracottaBright
+                : AppColors.textSecondary,
           ),
         ),
       ),

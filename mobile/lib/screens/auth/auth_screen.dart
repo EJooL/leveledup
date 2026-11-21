@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/career_companion_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/leveledup_arrow.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -59,59 +59,90 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            // 1. Top Dark Brand Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 18, 24, 22),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  // 1. Main Hero Brand Logo with Warm Orange Glow Behind It
+                  Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
                     children: [
-                      Container(
-                        width: 30,
-                        height: 30,
-                        decoration: const BoxDecoration(
-                          color: AppColors.terracotta,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_upward_rounded,
-                          color: AppColors.white,
-                          size: 17,
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: RepaintBoundary(
+                            child: OverflowBox(
+                              maxWidth: 380,
+                              maxHeight: 220,
+                              child: Container(
+                                width: 340,
+                                height: 192,
+                                decoration: BoxDecoration(
+                                  gradient: RadialGradient(
+                                    center: Alignment.center,
+                                    radius: 0.56,
+                                    colors: [
+                                      AppColors.accentGoldBright
+                                          .withValues(alpha: 0.42),
+                                      AppColors.terracottaBright
+                                          .withValues(alpha: 0.28),
+                                      AppColors.terracotta
+                                          .withValues(alpha: 0.12),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.34, 0.66, 1.0],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 9),
-                      const Text.rich(
-                        TextSpan(
-                          style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.2,
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          LeveledUpArrow(width: 24, height: 36),
+                          SizedBox(width: 12),
+                          Text.rich(
+                            TextSpan(
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.8,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'Leveled',
+                                  style: TextStyle(color: AppColors.white),
+                                ),
+                                TextSpan(
+                                  text: 'Up',
+                                  style: TextStyle(
+                                    color: AppColors.terracotta,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          children: [
-                            TextSpan(
-                              text: 'Leveled',
-                              style: TextStyle(color: AppColors.white),
-                            ),
-                            TextSpan(
-                              text: 'Up',
-                              style: TextStyle(color: AppColors.terracotta),
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 48),
+
+                  // 2. Headline & Professional Living CV Subtitle
                   AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 260),
+                    duration: const Duration(milliseconds: 240),
                     transitionBuilder: (child, anim) => FadeTransition(
                       opacity: anim,
                       child: SlideTransition(
                         position: Tween<Offset>(
-                          begin: const Offset(0, 0.12),
+                          begin: const Offset(0, 0.08),
                           end: Offset.zero,
                         ).animate(anim),
                         child: child,
@@ -121,9 +152,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       key: ValueKey<bool>(_isLoginMode),
                       children: [
                         Text(
-                          _isLoginMode
-                              ? 'Welcome Back, Challenger'
-                              : 'Start Your Global Journey',
+                          _isLoginMode ? 'Welcome back' : 'Create your account',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 24,
@@ -132,217 +161,229 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             letterSpacing: -0.4,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 8),
                         Text(
                           _isLoginMode
-                              ? 'Sign in to access your ATS scans, STAR rewrites & career quests.'
-                              : 'Create your profile to scan resumes and track your global career XP.',
+                              ? 'Track your ATS progress, log work wins, and keep your CV updated.'
+                              : 'Set up your profile to track ATS progress, log work wins, and keep your CV updated.',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontSize: 12.5,
+                            fontSize: 13,
                             color: AppColors.textSecondary,
+                            height: 1.45,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
+                  const SizedBox(height: 24),
 
-            // 2. Curved Sheet Container for Login / Register Form
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                  border: Border(
-                    top: BorderSide(color: AppColors.border, width: 1),
-                  ),
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Animated Segmented Toggle Pill (Sign In vs Register)
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () =>
-                                    setState(() => _isLoginMode = true),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 220),
-                                  curve: Curves.easeOutCubic,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 11,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _isLoginMode
-                                        ? AppColors.terracotta
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    'Sign In',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: _isLoginMode
-                                          ? AppColors.white
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
+                  // 3. Harmonized Segmented Control (Active tab: Main Terracotta Orange)
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isLoginMode = true),
+                            behavior: HitTestBehavior.opaque,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOutCubic,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _isLoginMode
+                                    ? AppColors.terracotta
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Sign In',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: _isLoginMode
+                                      ? AppColors.white
+                                      : AppColors.textSecondary,
                                 ),
                               ),
                             ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () =>
-                                    setState(() => _isLoginMode = false),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 220),
-                                  curve: Curves.easeOutCubic,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 11,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: !_isLoginMode
-                                        ? AppColors.terracotta
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    'Register',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: !_isLoginMode
-                                          ? AppColors.white
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Animated Form Switcher
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 280),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        transitionBuilder: (child, animation) {
-                          final slide = Tween<Offset>(
-                            begin: Offset(_isLoginMode ? -0.06 : 0.06, 0),
-                            end: Offset.zero,
-                          ).animate(animation);
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: slide,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: _isLoginMode
-                            ? _buildLoginForm()
-                            : _buildRegisterForm(),
-                      ),
-
-                      if (authState.errorMessage != null) ...[
-                        const SizedBox(height: 14),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.crimson.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.crimson),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.error_outline_rounded,
-                                color: AppColors.crimson,
-                                size: 18,
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isLoginMode = false),
+                            behavior: HitTestBehavior.opaque,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOutCubic,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: !_isLoginMode
+                                    ? AppColors.terracotta
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  authState.errorMessage!,
-                                  style: const TextStyle(
-                                    fontSize: 12.5,
-                                    color: AppColors.white,
-                                  ),
+                              child: Text(
+                                'Register',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: !_isLoginMode
+                                      ? AppColors.white
+                                      : AppColors.textSecondary,
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-                      const SizedBox(height: 24),
+                  // 4. Animated Form Fields Directly on #09090B Canvas
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 260),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      final slide = Tween<Offset>(
+                        begin: Offset(_isLoginMode ? -0.05 : 0.05, 0),
+                        end: Offset.zero,
+                      ).animate(animation);
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(position: slide, child: child),
+                      );
+                    },
+                    child: _isLoginMode
+                        ? _buildLoginForm()
+                        : _buildRegisterForm(),
+                  ),
 
-                      // Primary Submit Pill Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: _submitForm,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.terracotta,
-                            foregroundColor: AppColors.white,
-                            shape: const StadiumBorder(),
+                  if (authState.errorMessage != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.crimson.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.crimson),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            color: AppColors.crimson,
+                            size: 20,
                           ),
-                          child: Text(
-                            _isLoginMode
-                                ? 'Sign In to LeveledUp'
-                                : 'Create Career Account',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              authState.errorMessage!,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.white,
+                              ),
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // 5. Primary CTA Button (Main Terracotta Orange, 12px radius)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _submitForm,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.terracotta,
+                        foregroundColor: AppColors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        _isLoginMode ? 'Sign In' : 'Create Account',
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 6. Subtle "or" Divider
+                  const Row(
+                    children: [
+                      Expanded(
+                        child: Divider(color: AppColors.border, height: 1),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          'or',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textMuted,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 14),
-
-                      // 1-Tap Guest / Demo Access
-                      Center(
-                        child: TextButton(
-                          onPressed: () => ref
-                              .read(authProvider.notifier)
-                              .continueAsDemoGuest(),
-                          child: Text(
-                            'Continue with Instant Demo Account →',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.terracottaBright,
-                            ),
-                          ),
-                        ),
+                      Expanded(
+                        child: Divider(color: AppColors.border, height: 1),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 16),
+
+                  // 7. Full-Width 48px Outlined Secondary Button (Neutral Light Text)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: () => ref
+                          .read(authProvider.notifier)
+                          .continueAsDemoGuest(),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: AppColors.textPrimary,
+                        side: const BorderSide(
+                          color: AppColors.border,
+                          width: 1,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Try Instant Demo',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -403,7 +444,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 color: AppColors.textMuted,
-                size: 19,
+                size: 20,
               ),
             ),
             hintText: 'Enter your password',
@@ -439,9 +480,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             hintText: 'e.g. Ijul',
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         const Text(
-          'Target Global Role',
+          'Target Role',
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
@@ -461,7 +502,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             hintText: 'e.g. Global Software & Mobile Engineer',
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         const Text(
           'Email Address',
           style: TextStyle(
@@ -484,7 +525,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             hintText: 'you@example.com',
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         const Text(
           'Password',
           style: TextStyle(
@@ -512,7 +553,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 color: AppColors.textMuted,
-                size: 19,
+                size: 20,
               ),
             ),
             hintText: 'Create a password',
@@ -520,7 +561,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         ),
         const SizedBox(height: 16),
         const Text(
-          'Starting Career Stage',
+          'Current Stage',
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
@@ -539,20 +580,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             return ChoiceChip(
               label: Text(
                 stage == CareerStage.jobHunting
-                    ? 'Hunting for a Job (Pre-Job)'
-                    : 'Already Hired (Career Companion)',
+                    ? 'Job Hunting'
+                    : 'Already Hired',
               ),
               selected: isSel,
+              showCheckmark: false,
               onSelected: (_) =>
                   setState(() => _selectedInitialStage = stage),
-              selectedColor: AppColors.terracotta.withValues(alpha: 0.25),
-              backgroundColor: AppColors.surfaceElevated,
+              selectedColor: AppColors.border,
+              backgroundColor: AppColors.surface,
+              side: BorderSide(
+                color: isSel ? AppColors.borderBright : AppColors.border,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               labelStyle: TextStyle(
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isSel
-                    ? AppColors.terracottaBright
-                    : AppColors.textSecondary,
+                color: isSel ? AppColors.white : AppColors.textSecondary,
               ),
             );
           }).toList(),

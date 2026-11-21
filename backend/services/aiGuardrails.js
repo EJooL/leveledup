@@ -3,6 +3,7 @@
  * and Zero-Hallucination Parity Utilities for LeveledUp Backend Services.
  */
 
+const crypto = require('crypto');
 const { normalizeLanguage } = require('./bilingualValidation');
 
 const VALID_ISSUE_CATEGORIES = new Set([
@@ -112,7 +113,7 @@ async function withTimeout(promise, timeoutMs) {
 
 /**
  * Call Gemini with resilient Flash model fallback chain + timeout guard.
- * @param {{ aiClient: any, contents: string, systemInstruction: string, models?: string[], timeoutMs?: number }} params
+ * @param {{ aiClient: any, contents: string, systemInstruction: string, models?: string[], timeoutMs?: number, temperature?: number, topP?: number }} params
  * @returns {Promise<{ parsed: any, modelUsed: string }>}
  */
 async function generateJsonWithGemini({
@@ -121,6 +122,8 @@ async function generateJsonWithGemini({
   systemInstruction,
   models,
   timeoutMs = Number(process.env.GEMINI_TIMEOUT_MS) || 20000,
+  temperature,
+  topP,
 }) {
   if (!aiClient || !aiClient.models || typeof aiClient.models.generateContent !== 'function') {
     throw new Error('AI client is not initialized');
@@ -129,16 +132,24 @@ async function generateJsonWithGemini({
   const candidates = getGeminiModelChain(models);
   let lastError = null;
 
+  const requestConfig = {
+    systemInstruction,
+    responseMimeType: 'application/json',
+  };
+  if (typeof temperature === 'number') {
+    requestConfig.temperature = temperature;
+  }
+  if (typeof topP === 'number') {
+    requestConfig.topP = topP;
+  }
+
   for (const model of candidates) {
     try {
       const response = await withTimeout(
         aiClient.models.generateContent({
           model,
           contents,
-          config: {
-            systemInstruction,
-            responseMimeType: 'application/json',
-          },
+          config: requestConfig,
         }),
         timeoutMs
       );
@@ -391,6 +402,158 @@ function normalizeIssueSeverity(rawSeverity) {
   return VALID_ISSUE_SEVERITIES.has(sev) ? sev : 'warning';
 }
 
+/**
+ * Enforce strict severity ceilings by category so minor phrasing or keyword tips
+ * are never randomly inflated to 'critical' (-11) by the LLM.
+ */
+function normalizeIssueSeverityForCategory(rawSeverity, category, issue = {}) {
+  const base = normalizeIssueSeverity(rawSeverity);
+  const id = String(issue.id || '').toLowerCase();
+
+  if (id === 'cliche_words' || id === 'cliches') {
+    return 'suggestion';
+  }
+
+  // Reserve 'critical' strictly for objective personal_info bias / PII or fatal ATS readability blockers
+  if (
+    base === 'critical' &&
+    (category === 'language_quality' ||
+      category === 'keyword_match' ||
+      category === 'achievements')
+  ) {
+    return 'warning';
+  }
+
+  return base;
+}
+
+/**
+ * Compute lightweight deterministic text stats used in ATS scoring.
+ */
+function computeTextStats(text) {
+  const str = typeof text === 'string' ? text.trim() : '';
+  const words = str ? str.split(/\s+/).filter(Boolean) : [];
+  return {
+    charCount: str.length,
+    wordCount: words.length,
+    hasMetrics: hasQuantifiedMetric(str),
+  };
+}
+
+/**
+ * Normalize extracted CV text for exact-content SHA-256 hashing so trivial
+ * whitespace/line-ending differences across PDF re-parses produce the same hash.
+ */
+function normalizeCvTextForHash(text) {
+  return String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Compute deterministic SHA-256 fingerprint of normalized CV text + market/region + hasPhoto.
+ */
+function computeCvContentHash({ text = '', mode = 'global', region = null, hasPhoto = false } = {}) {
+  const normalizedText = normalizeCvTextForHash(text);
+  const normalizedRegion = String(region || mode || 'global').trim().toLowerCase();
+  const payload = JSON.stringify({
+    text: normalizedText,
+    region: normalizedRegion,
+    hasPhoto: Boolean(hasPhoto),
+  });
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
+
+/**
+ * Shared, 100% deterministic ATS score calculator used by BOTH live Gemini analysis
+ * and the Rule-Based fallback engine. Never trusts raw LLM numeric scores.
+ *
+ * Deduction rubric (clamped 10..100):
+ * - critical: -11 (objective bias/PII or severe ATS blocker)
+ * - warning: -7 (substantive ATS/STAR/keyword gap)
+ * - suggestion: -3 (polish tips; capped cumulatively at -12 so minor tips never tank a strong CV)
+ */
+function calculateAtsScore({
+  issues = [],
+  matchedKeywords = [],
+  missingKeywords = [],
+  hasPhoto = false,
+  textStats = null,
+} = {}) {
+  const safeIssues = Array.isArray(issues) ? issues : [];
+  const matched = Array.isArray(matchedKeywords) ? matchedKeywords : [];
+  const missing = Array.isArray(missingKeywords) ? missingKeywords : [];
+
+  let score = 100;
+  let suggestionPenalty = 0;
+  let hasPhotoIssue = false;
+  let hasKeywordIssue = false;
+  let hasTooShortIssue = false;
+
+  const seenKeys = new Set();
+  for (const issue of safeIssues) {
+    if (!issue || typeof issue !== 'object') continue;
+    const dedupeKey = String(
+      issue.id || `${issue.category || 'general'}_${issue.title || ''}`
+    )
+      .trim()
+      .toLowerCase();
+    if (seenKeys.has(dedupeKey)) continue;
+    seenKeys.add(dedupeKey);
+
+    if (isPhotoHallucinationIssue(issue)) hasPhotoIssue = true;
+    if (
+      issue.id === 'missing_core_keywords' ||
+      issue.id === 'missing_keywords' ||
+      issue.category === 'keyword_match'
+    ) {
+      hasKeywordIssue = true;
+    }
+    if (issue.id === 'too_short') {
+      hasTooShortIssue = true;
+    }
+
+    const sev = normalizeIssueSeverity(issue.severity);
+    if (sev === 'critical') {
+      score -= 11;
+    } else if (sev === 'warning') {
+      score -= 7;
+    } else if (sev === 'suggestion') {
+      if (suggestionPenalty < 12) {
+        const deduct = Math.min(3, 12 - suggestionPenalty);
+        score -= deduct;
+        suggestionPenalty += deduct;
+      }
+    }
+  }
+
+  // Deterministic safeguard if embedded photo exists even when omitted from issues array
+  if (hasPhoto && !hasPhotoIssue) {
+    score -= 11;
+  }
+
+  // Deterministic safeguard for severe keyword gap not already flagged as an issue
+  if (!hasKeywordIssue && missing.length >= 6 && matched.length <= 1) {
+    score -= 5;
+  }
+
+  // Deterministic safeguard for extremely brief text not already flagged as too_short
+  if (
+    textStats &&
+    typeof textStats.wordCount === 'number' &&
+    textStats.wordCount > 0 &&
+    textStats.wordCount < 40 &&
+    !hasTooShortIssue
+  ) {
+    score -= 7;
+  }
+
+  return Math.max(10, Math.min(100, Math.round(score)));
+}
+
 function normalizeStringArray(arr) {
   if (!Array.isArray(arr)) return [];
   const seen = new Set();
@@ -453,10 +616,11 @@ function sanitizeAnalysisResult(
       ? sanitizeFabricatedMetrics(rawAfter, `${text}\n${rawBefore}`, normalizedLang)
       : (isId ? 'Sesuaikan dengan pencapaian terukur menggunakan [X]% atau [jumlah].' : 'Rewrite with quantified outcomes using [X]% or [number].');
 
+    const category = normalizeIssueCategory(item.category, { id, title, detail, fix });
     const normalizedIssue = {
       id,
-      category: normalizeIssueCategory(item.category, { id, title, detail, fix }),
-      severity: normalizeIssueSeverity(item.severity),
+      category,
+      severity: normalizeIssueSeverityForCategory(item.severity, category, { id, title }),
       title,
       detail,
       fix,
@@ -472,16 +636,7 @@ function sanitizeAnalysisResult(
   // 2. Hard programmatic guard: strictly strip photo/headshot issues when hasPhoto is false
   const verifiedIssues = stripHallucinatedPhotoIssues(cleanedIssues, hasPhoto);
 
-  // 3. Recalculate overallScore deterministically from verified issues
-  let score = 100;
-  for (const issue of verifiedIssues) {
-    if (issue.severity === 'critical') score -= 11;
-    else if (issue.severity === 'warning') score -= 7;
-    else if (issue.severity === 'suggestion') score -= 3;
-  }
-  const overallScore = Math.max(10, Math.min(100, score));
-
-  // 4. Sanitize keywordMatch
+  // 3. Sanitize keywordMatch before score calculation so keywords participate deterministically
   const inferredRole = typeof inferJobRole === 'function' ? inferJobRole(text) : 'Professional';
   const fallbackKw =
     typeof analyzeKeywords === 'function'
@@ -502,6 +657,16 @@ function sanitizeAnalysisResult(
 
   const finalMatched = matched.length > 0 || missing.length > 0 ? matched : fallbackKw.matched;
   const finalMissing = matched.length > 0 || missing.length > 0 ? missing : fallbackKw.missing;
+
+  // 4. Compute overallScore mathematically via shared calculateAtsScore (never trusts LLM raw score)
+  const textStats = computeTextStats(text);
+  const overallScore = calculateAtsScore({
+    issues: verifiedIssues,
+    matchedKeywords: finalMatched,
+    missingKeywords: finalMissing,
+    hasPhoto,
+    textStats,
+  });
 
   const summary =
     typeof source.summary === 'string' && source.summary.trim()
@@ -719,6 +884,11 @@ module.exports = {
   isHeaderLikeBullet,
   ensureMetricOrPlaceholder,
   isBiasLine,
+  normalizeIssueSeverityForCategory,
+  computeTextStats,
+  normalizeCvTextForHash,
+  computeCvContentHash,
+  calculateAtsScore,
   sanitizeAnalysisResult,
   sanitizeRewriteResult,
   sanitizeWinBulletResult,

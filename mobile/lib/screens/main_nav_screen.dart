@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
 import '../models/career_companion_model.dart';
 import '../providers/career_provider.dart';
+import '../widgets/level_up_splash_overlay.dart';
 import 'career/progress_screen.dart';
 import 'home/home_dashboard_screen.dart';
 import 'scanner/scanner_screen.dart';
@@ -19,6 +20,7 @@ class _MainNavScreenState extends State<MainNavScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
   double _slideDirection = 1.0;
+  bool _isShowingLevelUpSplash = false;
   late final AnimationController _animController;
   late final Animation<double> _fadeAnimation;
 
@@ -53,6 +55,28 @@ class _MainNavScreenState extends State<MainNavScreen>
       _currentIndex = index;
     });
     _animController.forward(from: 0.0);
+  }
+
+  void _showLevelUpSplash(LevelUpEvent event) {
+    if (_isShowingLevelUpSplash) return;
+    _isShowingLevelUpSplash = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        _isShowingLevelUpSplash = false;
+        return;
+      }
+      final container = ProviderScope.containerOf(context, listen: false);
+      container.read(careerProvider.notifier).consumeLevelUpEvent();
+      try {
+        await LevelUpSplashOverlay.show(
+          context,
+          newLevel: event.newLevel,
+          phaseLabel: event.phaseBadgeLabel,
+        );
+      } finally {
+        _isShowingLevelUpSplash = false;
+      }
+    });
   }
 
   void _showMilestoneCelebrationToast(CareerBadge badge) {
@@ -111,7 +135,7 @@ class _MainNavScreenState extends State<MainNavScreen>
   Widget build(BuildContext context) {
     final screens = [
       HomeDashboardScreen(onNavigateTab: _setTab),
-      const ScannerScreen(),
+      ScannerScreen(isActive: _currentIndex == 1),
       const WinsScreen(),
       ProgressScreen(onNavigateTab: _setTab),
     ];
@@ -146,6 +170,14 @@ class _MainNavScreenState extends State<MainNavScreen>
           (prev, next) {
             if (next != null) {
               _showMilestoneCelebrationToast(next);
+            }
+          },
+        );
+        ref.listen<LevelUpEvent?>(
+          careerProvider.select((p) => p.pendingLevelUpEvent),
+          (prev, next) {
+            if (next != null && next.eventId != prev?.eventId) {
+              _showLevelUpSplash(next);
             }
           },
         );

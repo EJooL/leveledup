@@ -38,13 +38,13 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
         return AlertDialog(
           backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
           title: const Row(
             children: [
               Icon(Icons.add_task_rounded, color: AppColors.terracottaBright),
-              SizedBox(width: 10),
+              SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Add Self-Reported Goal',
@@ -66,7 +66,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                   'Add a custom job-hunt or onboarding task to your personal checklist.',
                   style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 TextField(
                   controller: titleCtrl,
                   style: const TextStyle(color: AppColors.white),
@@ -136,11 +136,11 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             content: Row(
               children: [
                 const Icon(
-                  Icons.verified_outlined,
+                  Icons.verified_rounded,
                   color: AppColors.terracottaBright,
-                  size: 18,
+                  size: 20,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     msg,
@@ -210,7 +210,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
       color: AppColors.background,
       child: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -226,14 +226,14 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                           isHired
                               ? 'HIRED · FIRST 90 DAYS'
                               : 'JOB HUNT CHECKLIST & SKILL GAP',
-                          style: const TextStyle(
-                            fontSize: 11,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 10.5,
                             fontWeight: FontWeight.w800,
                             color: AppColors.terracottaBright,
                             letterSpacing: 0.7,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         const Text(
                           'Verified Progress',
                           style: TextStyle(
@@ -246,6 +246,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   IconButton(
                     tooltip: 'Sign out',
                     onPressed: () => ref.read(authProvider.notifier).signOut(),
@@ -261,89 +262,117 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
 
               // Mode Transition Banner ("I got the job" -> First 90 Days checklist)
               Container(
-                padding: const EdgeInsets.all(15),
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isHired
                         ? AppColors.emerald.withValues(alpha: 0.45)
                         : AppColors.border,
                   ),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      isHired
-                          ? Icons.celebration_rounded
-                          : Icons.work_outline_rounded,
-                      color: isHired
-                          ? AppColors.emerald
-                          : AppColors.terracottaBright,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isHired
-                                ? 'First 90 Days Onboarding Active'
-                                : 'Currently in Job Hunt Mode',
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isHired
-                                ? 'Track your 30/60/90 goals and log work wins into your living CV.'
-                                : 'Landed an offer? Switch to your First 90 Days onboarding checklist.',
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        if (isHired) {
-                          ref
-                              .read(careerProvider.notifier)
-                              .setCareerStage(CareerStage.jobHunting);
-                        } else {
-                          ref.read(careerProvider.notifier).markGotTheJob();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isHired
-                            ? AppColors.surfaceElevated
-                            : AppColors.terracotta,
-                        foregroundColor: AppColors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          isHired
+                              ? Icons.celebration_rounded
+                              : Icons.work_outline_rounded,
+                          color: isHired
+                              ? AppColors.emerald
+                              : AppColors.terracottaBright,
+                          size: 24,
                         ),
-                      ),
-                      icon: Icon(
-                        isHired
-                            ? Icons.work_outline_rounded
-                            : Icons.celebration_rounded,
-                        size: 15,
-                      ),
-                      label: Text(
-                        isHired ? 'Job Hunt' : 'I got the job',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isHired
+                                    ? 'First 90 Days Onboarding Active'
+                                    : 'Currently in Job Hunt Mode',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isHired
+                                    ? 'Track your 30/60/90 goals and log work wins into your living CV.'
+                                    : 'Landed an offer? Switch to your First 90 Days onboarding checklist.',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: isHired
+                          ? OutlinedButton.icon(
+                              onPressed: () => ref
+                                  .read(careerProvider.notifier)
+                                  .setCareerStage(CareerStage.jobHunting),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.work_outline_rounded,
+                                size: 16,
+                              ),
+                              label: const Text(
+                                'Switch Back to Job Hunt',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: () => ref
+                                  .read(careerProvider.notifier)
+                                  .markGotTheJob(),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.terracotta,
+                                foregroundColor: AppColors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.celebration_rounded,
+                                size: 16,
+                              ),
+                              label: const Text(
+                                'I got the job',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -382,7 +411,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
               // ---------------------------------------------------------------
               // SECTION A: SCORE HISTORY TIMELINE ("54 -> 71 -> 82")
@@ -416,20 +445,19 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
   Widget _buildScoreHistorySection(UserCareerProfile profile) {
     final history = profile.scoreHistory;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               const Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.timeline_rounded,
@@ -440,7 +468,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                   Text(
                     'ATS Score History',
                     style: TextStyle(
-                      fontSize: 15.5,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: AppColors.white,
                     ),
@@ -449,7 +477,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
+                  horizontal: 12,
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
@@ -468,152 +496,150 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          if (history.isEmpty)
-            const Text(
+        ),
+        const SizedBox(height: 12),
+        if (history.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Text(
               'No CV scans recorded yet. Run an ATS scan in the Scanner tab to track your score progression (e.g., 54 → 71 → 82) and verify which issues were fixed between versions.',
               style: TextStyle(
                 fontSize: 12.5,
                 color: AppColors.textSecondary,
                 height: 1.45,
               ),
-            )
-          else ...[
-            ...history.reversed.map((point) {
-              final isPositive = point.scoreDelta > 0;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(
-                    color: isPositive
-                        ? AppColors.emerald.withValues(alpha: 0.4)
-                        : AppColors.border,
-                  ),
+            ),
+          )
+        else
+          ...history.reversed.map((point) {
+            final isPositive = point.scoreDelta > 0;
+            final scoreColor = AppColors.getScoreColor(point.overallScore);
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isPositive
+                      ? AppColors.emerald.withValues(alpha: 0.45)
+                      : AppColors.border,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.getScoreColor(point.overallScore)
-                                .withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '${point.overallScore}/100',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color:
-                                  AppColors.getScoreColor(point.overallScore),
-                            ),
-                          ),
-                        ),
-                        if (point.scoreDelta != 0) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isPositive
-                                  ? AppColors.emerald.withValues(alpha: 0.16)
-                                  : AppColors.crimson.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              isPositive
-                                  ? '+${point.scoreDelta} pts'
-                                  : '${point.scoreDelta} pts',
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              '${point.overallScore}',
                               style: GoogleFonts.jetBrainsMono(
-                                fontSize: 10.5,
+                                fontSize: 20,
                                 fontWeight: FontWeight.w800,
-                                color: isPositive
-                                    ? AppColors.emerald
-                                    : AppColors.crimson,
+                                color: scoreColor,
                               ),
                             ),
-                          ),
-                        ],
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            '${point.fileName} · ${point.jobTitle}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.white,
+                            Text(
+                              '/100',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textMuted,
+                              ),
                             ),
-                          ),
+                            if (point.scoreDelta != 0) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                isPositive
+                                    ? '+${point.scoreDelta} pts'
+                                    : '${point.scoreDelta} pts',
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: isPositive
+                                      ? AppColors.emerald
+                                      : AppColors.crimson,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         Text(
                           point.createdAtLabel,
-                          style: const TextStyle(
+                          style: GoogleFonts.jetBrainsMono(
                             fontSize: 11,
                             color: AppColors.textMuted,
                           ),
                         ),
                       ],
                     ),
-                    if (point.fixedIssues.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: point.fixedIssues.map((fi) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${point.fileName} · ${point.jobTitle}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.white,
+                    ),
+                  ),
+                  if (point.fixedIssues.isNotEmpty) ...[
+                    const Divider(
+                      color: AppColors.border,
+                      height: 24,
+                    ),
+                    ...point.fixedIssues.map((fi) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.check_circle_outline_rounded,
+                              size: 16,
+                              color: AppColors.emerald,
                             ),
-                            decoration: BoxDecoration(
-                              color: AppColors.emerald.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.check_circle_outline_rounded,
-                                  size: 13,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Fixed: ${fi.title}',
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
                                   color: AppColors.emerald,
+                                  height: 1.4,
                                 ),
-                                const SizedBox(width: 4),
-                                Flexible(
-                                  child: Text(
-                                    'Fixed: ${fi.title}',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.emerald,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
+                          ],
+                        ),
+                      );
+                    }),
                   ],
-                ),
-              );
-            }),
-          ],
-        ],
-      ),
+                ],
+              ),
+            );
+          }),
+      ],
     );
   }
 
@@ -621,183 +647,165 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     UserCareerProfile profile,
     List<CareerQuest> modeQuests,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  profile.isHiredMode
-                      ? 'First 90 Days Checklist'
-                      : 'Job-Hunt & ATS Checklist',
-                  style: const TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.white,
-                  ),
-                ),
-              ),
-              Text(
-                profile.activeModeProgressLabel,
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 12.5,
+    final pct = (profile.activeModeProgressFraction * 100).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                profile.isHiredMode
+                    ? 'First 90 Days Checklist'
+                    : 'Job-Hunt & ATS Checklist',
+                style: const TextStyle(
+                  fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.emerald,
+                  color: AppColors.white,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // Accurate Progress Bar bound strictly to completedCount / totalCount
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: profile.activeModeProgressFraction,
-              minHeight: 8,
-              backgroundColor: AppColors.background,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.emerald,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '${profile.activeModeProgressLabel} · $pct%',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: AppColors.emerald,
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Accurate Progress Bar bound strictly to completedCount / totalCount
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: profile.activeModeProgressFraction,
+            minHeight: 8,
+            backgroundColor: AppColors.surfaceElevated,
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              AppColors.emerald,
+            ),
           ),
-          const SizedBox(height: 14),
+        ),
+        const SizedBox(height: 16),
 
-          ...modeQuests.map((quest) {
-            final isVerifiedType = !quest.isManual;
-            return InkWell(
-              onTap: () => _handleQuestTap(quest),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: quest.isCompleted
-                        ? AppColors.emerald.withValues(alpha: 0.45)
-                        : AppColors.border,
+        ...modeQuests.map((quest) {
+          final isVerifiedType = !quest.isManual;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Material(
+              color: AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: quest.isCompleted
+                      ? AppColors.emerald.withValues(alpha: 0.45)
+                      : AppColors.border,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _handleQuestTap(quest),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CareerIconBadge(
+                        icon: CareerIcons.forQuest(quest),
+                        accentColor: CareerIcons.forQuestAccent(quest),
+                        size: 40,
+                        radius: 12,
+                        iconSize: 20,
+                        showCompletedBadge: quest.isCompleted,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              quest.title,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: quest.isCompleted
+                                    ? AppColors.textSecondary
+                                    : AppColors.white,
+                                decoration: quest.isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              quest.verificationType.label,
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: isVerifiedType
+                                    ? AppColors.terracottaBright
+                                    : AppColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              quest.description,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        quest.isCompleted
+                            ? Icons.check_circle_rounded
+                            : (quest.isManual
+                                ? Icons.radio_button_unchecked_rounded
+                                : Icons.lock_clock_rounded),
+                        color: quest.isCompleted
+                            ? AppColors.emerald
+                            : AppColors.textMuted,
+                        size: 20,
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CareerIconBadge(
-                      icon: CareerIcons.forQuest(quest),
-                      accentColor: CareerIcons.forQuestAccent(quest),
-                      size: 42,
-                      radius: 12,
-                      iconSize: 20,
-                      showCompletedBadge: quest.isCompleted,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  quest.title,
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: quest.isCompleted
-                                        ? AppColors.textSecondary
-                                        : AppColors.white,
-                                    decoration: quest.isCompleted
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isVerifiedType
-                                      ? AppColors.terracotta
-                                          .withValues(alpha: 0.16)
-                                      : AppColors.background,
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: isVerifiedType
-                                        ? AppColors.terracotta
-                                            .withValues(alpha: 0.4)
-                                        : AppColors.border,
-                                  ),
-                                ),
-                                child: Text(
-                                  quest.verificationType.label,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: isVerifiedType
-                                        ? AppColors.terracottaBright
-                                        : AppColors.textMuted,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            quest.description,
-                            style: const TextStyle(
-                              fontSize: 11.5,
-                              color: AppColors.textSecondary,
-                              height: 1.35,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      quest.isCompleted
-                          ? Icons.check_circle_rounded
-                          : (quest.isManual
-                              ? Icons.radio_button_unchecked_rounded
-                              : Icons.lock_clock_rounded),
-                      color: quest.isCompleted
-                          ? AppColors.emerald
-                          : AppColors.textMuted,
-                      size: 21,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-
-          const SizedBox(height: 6),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () =>
-                  _showAddSelfReportedGoalDialog(profile.normalizedMode),
-              icon: const Icon(Icons.add_rounded, size: 17),
-              label: const Text(
-                'Add Self-Reported Goal',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
               ),
             ),
+          );
+        }),
+
+        const SizedBox(height: 4),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () =>
+                _showAddSelfReportedGoalDialog(profile.normalizedMode),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: const Text(
+              'Add Self-Reported Goal',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -805,304 +813,309 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     final isId = report.isIndonesian;
     final availableRoles = ApiClient.roleKeywordsCatalog.keys.toList();
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isId
-                          ? 'ANALISIS KESENJANGAN KEAHLIAN'
-                          : 'SKILL GAP & ACTION PLAN',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.terracottaBright,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      report.jobTitle,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Bilingual EN / ID toggle for Skill Gap
-              Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _MiniTogglePill(
-                    label: 'EN',
-                    selected: !isId,
-                    onTap: () => setState(() => _langOverride = 'en'),
+                  Text(
+                    isId
+                        ? 'ANALISIS KESENJANGAN KEAHLIAN'
+                        : 'SKILL GAP & ACTION PLAN',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.terracottaBright,
+                    ),
                   ),
-                  const SizedBox(width: 4),
-                  _MiniTogglePill(
-                    label: 'ID',
-                    selected: isId,
-                    onTap: () => setState(() => _langOverride = 'id'),
+                  const SizedBox(height: 4),
+                  Text(
+                    report.jobTitle,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.white,
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // Role Switcher chips across diverse fresh-grad fields
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: availableRoles.map((role) {
-                final isSelected = role == report.jobTitle;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
-                    label: Text(role),
-                    selected: isSelected,
-                    onSelected: (_) => setState(() => _roleOverride = role),
-                    selectedColor:
-                        AppColors.terracotta.withValues(alpha: 0.24),
-                    backgroundColor: AppColors.surfaceElevated,
-                    labelStyle: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected
-                          ? AppColors.terracottaBright
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                );
-              }).toList(),
             ),
-          ),
-          const SizedBox(height: 14),
-
-          if (report.matchedKeywords.isNotEmpty) ...[
-            Text(
-              isId
-                  ? 'KATA KUNCI TERDETEKSI DI CV ANDA (${report.matchedKeywords.length})'
-                  : 'MATCHED IN YOUR CV (${report.matchedKeywords.length})',
-              style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textSecondary,
-                letterSpacing: 0.5,
-              ),
+            const SizedBox(width: 8),
+            // Bilingual EN / ID toggle for Skill Gap
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _MiniTogglePill(
+                  label: 'EN',
+                  selected: !isId,
+                  onTap: () => setState(() => _langOverride = 'en'),
+                ),
+                const SizedBox(width: 4),
+                _MiniTogglePill(
+                  label: 'ID',
+                  selected: isId,
+                  onTap: () => setState(() => _langOverride = 'id'),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: report.matchedKeywords.map((kw) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.emerald.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: AppColors.emerald.withValues(alpha: 0.4),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.check_rounded,
-                        size: 13,
-                        color: AppColors.emerald,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          kw,
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.emerald,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
           ],
+        ),
+        const SizedBox(height: 12),
+        // Role Switcher chips across diverse fresh-grad fields
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: availableRoles.map((role) {
+              final isSelected = role == report.jobTitle;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Text(role),
+                  selected: isSelected,
+                  showCheckmark: false,
+                  onSelected: (_) => setState(() => _roleOverride = role),
+                  selectedColor: AppColors.terracotta.withValues(alpha: 0.22),
+                  backgroundColor: AppColors.surfaceElevated,
+                  side: BorderSide(
+                    color:
+                        isSelected ? AppColors.terracotta : AppColors.border,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  labelStyle: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: isSelected
+                        ? AppColors.terracottaBright
+                        : AppColors.textSecondary,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 16),
 
+        if (report.matchedKeywords.isNotEmpty) ...[
           Text(
             isId
-                ? 'KATA KUNCI BELUM TERCANTUM & AKSI KONKRET (${report.gaps.length})'
-                : 'MISSING KEYWORDS & CONCRETE ACTIONS (${report.gaps.length})',
-            style: const TextStyle(
+                ? 'KATA KUNCI TERDETEKSI DI CV ANDA (${report.matchedKeywords.length})'
+                : 'MATCHED IN YOUR CV (${report.matchedKeywords.length})',
+            style: GoogleFonts.jetBrainsMono(
               fontSize: 10.5,
               fontWeight: FontWeight.w800,
               color: AppColors.textSecondary,
               letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 10),
-
-          if (report.gaps.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.emerald.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(
-                isId
-                    ? 'Luar biasa! Seluruh kata kunci utama untuk posisi ini telah tercantum di CV Anda.'
-                    : 'All core keywords for this target role are present in your CV!',
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.emerald,
-                ),
-              ),
-            )
-          else
-            ...report.gaps.map((gap) {
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: report.matchedKeywords.map((kw) {
               return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                decoration: BoxDecoration(
+                  color: AppColors.emerald.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: AppColors.emerald.withValues(alpha: 0.45),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.terracotta.withValues(alpha: 0.18),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              gap.keyword,
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.terracottaBright,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            gap.actionTypeLabel,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
+                    const Icon(
+                      Icons.check_rounded,
+                      size: 12,
+                      color: AppColors.emerald,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      gap.actionTitle,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      gap.concreteAction,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(11),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: PlaceholderRichText(
-                              text: '• ${gap.sampleBullet}',
-                              baseStyle: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.white,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Copy sample bullet',
-                            constraints: const BoxConstraints(),
-                            padding: const EdgeInsets.only(left: 8),
-                            onPressed: () {
-                              Clipboard.setData(
-                                ClipboardData(text: gap.sampleBullet),
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    isId
-                                        ? 'Contoh kalimat ${gap.keyword} disalin!'
-                                        : 'Sample bullet for ${gap.keyword} copied!',
-                                  ),
-                                  backgroundColor: AppColors.emerald,
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.copy_rounded,
-                              size: 16,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        kw,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.emerald,
+                        ),
                       ),
                     ),
                   ],
                 ),
               );
-            }),
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
         ],
-      ),
+
+        Text(
+          isId
+              ? 'KATA KUNCI BELUM TERCANTUM & AKSI KONKRET (${report.gaps.length})'
+              : 'MISSING KEYWORDS & CONCRETE ACTIONS (${report.gaps.length})',
+          style: GoogleFonts.jetBrainsMono(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textSecondary,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        if (report.gaps.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.emerald.withValues(alpha: 0.45),
+              ),
+            ),
+            child: Text(
+              isId
+                  ? 'Luar biasa! Seluruh kata kunci utama untuk posisi ini telah tercantum di CV Anda.'
+                  : 'All core keywords for this target role are present in your CV!',
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.emerald,
+              ),
+            ),
+          )
+        else
+          ...report.gaps.map((gap) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          gap.keyword,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.terracottaBright,
+                          ),
+                        ),
+                        Text(
+                          gap.actionTypeLabel,
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    gap.actionTitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    gap.concreteAction,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      height: 1.45,
+                    ),
+                  ),
+                  const Divider(
+                    color: AppColors.border,
+                    height: 24,
+                  ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isId ? 'CONTOH POIN CV' : 'SAMPLE CV BULLET',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            PlaceholderRichText(
+                              text: '• ${gap.sampleBullet}',
+                              baseStyle: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.white,
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        tooltip: 'Copy sample bullet',
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.all(8),
+                        onPressed: () {
+                          Clipboard.setData(
+                            ClipboardData(text: gap.sampleBullet),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                isId
+                                    ? 'Contoh kalimat ${gap.keyword} disalin!'
+                                    : 'Sample bullet for ${gap.keyword} copied!',
+                              ),
+                              backgroundColor: AppColors.emerald,
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.copy_rounded,
+                          size: 16,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+      ],
     );
   }
 }
@@ -1123,9 +1136,11 @@ class _FilterChipPill extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.terracotta : AppColors.surfaceElevated,
+          color: selected
+              ? AppColors.terracotta.withValues(alpha: 0.22)
+              : AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: selected ? AppColors.terracotta : AppColors.border,
@@ -1136,7 +1151,9 @@ class _FilterChipPill extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: selected ? AppColors.white : AppColors.textSecondary,
+            color: selected
+                ? AppColors.terracottaBright
+                : AppColors.textSecondary,
           ),
         ),
       ),
@@ -1160,9 +1177,11 @@ class _MiniTogglePill extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: selected ? AppColors.terracotta : AppColors.surfaceElevated,
+          color: selected
+              ? AppColors.terracotta.withValues(alpha: 0.22)
+              : AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
             color: selected ? AppColors.terracotta : AppColors.border,
@@ -1173,7 +1192,9 @@ class _MiniTogglePill extends StatelessWidget {
           style: GoogleFonts.jetBrainsMono(
             fontSize: 10.5,
             fontWeight: FontWeight.w800,
-            color: selected ? AppColors.white : AppColors.textSecondary,
+            color: selected
+                ? AppColors.terracottaBright
+                : AppColors.textSecondary,
           ),
         ),
       ),

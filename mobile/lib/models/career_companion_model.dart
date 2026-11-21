@@ -599,11 +599,35 @@ class DailyCheckIn {
   });
 }
 
+class LevelUpEvent {
+  final int newLevel;
+  final String careerMode; // 'job_hunt' | 'hired'
+  final int eventId;
+
+  const LevelUpEvent({
+    required this.newLevel,
+    required this.careerMode,
+    required this.eventId,
+  });
+
+  bool get isPostHire => careerMode == 'hired';
+
+  String get phaseBadgeLabel =>
+      isPostHire ? 'POST-HIRE PHASE' : 'PRE-JOB PHASE';
+}
+
 class UserCareerProfile {
+  static const int preJobXpStep = 250;
+  static const int postHireXpStep = 300;
+
   final String characterName;
   final String targetRole;
   final int? _level;
   final int? _currentXp;
+  final int? _preJobLevel;
+  final int? _preJobXp;
+  final int? _postHireLevel;
+  final int? _postHireXp;
   final int? _totalXpEarned;
   final int? _streakDays;
   final int? latestAtsScore;
@@ -621,12 +645,17 @@ class UserCareerProfile {
   final String? _reminderMessage;
   final ImprovedCV? latestMergedCv;
   final CareerBadge? pendingToastBadge;
+  final LevelUpEvent? pendingLevelUpEvent;
 
   UserCareerProfile({
     required this.characterName,
     required this.targetRole,
     required int level,
     required int currentXp,
+    int? preJobLevel,
+    int? preJobXp,
+    int? postHireLevel,
+    int? postHireXp,
     required int totalXpEarned,
     required int streakDays,
     this.latestAtsScore,
@@ -644,8 +673,13 @@ class UserCareerProfile {
     String? reminderMessage,
     this.latestMergedCv,
     this.pendingToastBadge,
+    this.pendingLevelUpEvent,
   })  : _level = level,
         _currentXp = currentXp,
+        _preJobLevel = preJobLevel ?? level,
+        _preJobXp = preJobXp ?? currentXp,
+        _postHireLevel = postHireLevel ?? 1,
+        _postHireXp = postHireXp ?? 150,
         _totalXpEarned = totalXpEarned,
         _streakDays = streakDays,
         _applicationsSent = applicationsSent,
@@ -657,9 +691,26 @@ class UserCareerProfile {
         _needsQuarterlyReminder = needsQuarterlyReminder,
         _reminderMessage = reminderMessage;
 
-  // Hot-reload safe getters
-  int get level => _level ?? 2;
-  int get currentXp => _currentXp ?? 180;
+  // Hot-reload safe phase-aware EXP getters
+  String get careerMode => isHiredMode ? 'hired' : 'job_hunt';
+  int get preJobLevel => _preJobLevel ?? (_level ?? 1);
+  int get preJobXp => _preJobXp ?? (_currentXp ?? 180);
+  int get postHireLevel => _postHireLevel ?? 1;
+  int get postHireXp => _postHireXp ?? 150;
+
+  int get currentLevel => isHiredMode ? postHireLevel : preJobLevel;
+  int get currentPhaseXp => isHiredMode ? postHireXp : preJobXp;
+  int get targetPhaseXp => isHiredMode
+      ? (postHireLevel * postHireXpStep)
+      : (preJobLevel * preJobXpStep);
+  double get xpProgress => targetPhaseXp > 0
+      ? (currentPhaseXp / targetPhaseXp).clamp(0.0, 1.0)
+      : 0.0;
+  String get phaseShortTag => isHiredMode ? 'POST-HIRE' : 'PRE-JOB';
+
+  // Legacy getters mapped cleanly to active phase EXP
+  int get level => currentLevel;
+  int get currentXp => currentPhaseXp;
   int get totalXpEarned => _totalXpEarned ?? 430;
   int get streakDays => _streakDays ?? 5;
   int get applicationsSent => _applicationsSent ?? 3;
@@ -736,9 +787,9 @@ class UserCareerProfile {
     return checkIns.any((c) => c.dateKey == today);
   }
 
-  int get xpToNextLevel => level * 250;
+  int get xpToNextLevel => targetPhaseXp;
 
-  double get levelProgress => (currentXp / xpToNextLevel).clamp(0.0, 1.0);
+  double get levelProgress => xpProgress;
 
   String get rankTitle {
     if (isHiredMode) return 'Hired · First 90 Days';
@@ -754,6 +805,10 @@ class UserCareerProfile {
     String? targetRole,
     int? level,
     int? currentXp,
+    int? preJobLevel,
+    int? preJobXp,
+    int? postHireLevel,
+    int? postHireXp,
     int? totalXpEarned,
     int? streakDays,
     int? latestAtsScore,
@@ -772,18 +827,31 @@ class UserCareerProfile {
     ImprovedCV? latestMergedCv,
     CareerBadge? pendingToastBadge,
     bool clearToastBadge = false,
+    LevelUpEvent? pendingLevelUpEvent,
+    bool clearLevelUpEvent = false,
   }) {
+    final nextStage = currentStage ?? this.currentStage;
+    final nextIsHired = nextStage != CareerStage.jobHunting;
+    final resolvedPreLevel = preJobLevel ?? this.preJobLevel;
+    final resolvedPreXp = preJobXp ?? this.preJobXp;
+    final resolvedPostLevel = postHireLevel ?? this.postHireLevel;
+    final resolvedPostXp = postHireXp ?? this.postHireXp;
+
     return UserCareerProfile(
       characterName: characterName ?? this.characterName,
       targetRole: targetRole ?? this.targetRole,
-      level: level ?? this.level,
-      currentXp: currentXp ?? this.currentXp,
+      level: level ?? (nextIsHired ? resolvedPostLevel : resolvedPreLevel),
+      currentXp: currentXp ?? (nextIsHired ? resolvedPostXp : resolvedPreXp),
+      preJobLevel: resolvedPreLevel,
+      preJobXp: resolvedPreXp,
+      postHireLevel: resolvedPostLevel,
+      postHireXp: resolvedPostXp,
       totalXpEarned: totalXpEarned ?? this.totalXpEarned,
       streakDays: streakDays ?? this.streakDays,
       latestAtsScore: latestAtsScore ?? this.latestAtsScore,
       applicationsSent: applicationsSent ?? this.applicationsSent,
       interviewsSecured: interviewsSecured ?? this.interviewsSecured,
-      currentStage: currentStage ?? this.currentStage,
+      currentStage: nextStage,
       quests: quests ?? this.quests,
       skills: skills ?? this.skills,
       badges: badges ?? this.badges,
@@ -798,6 +866,9 @@ class UserCareerProfile {
       pendingToastBadge: clearToastBadge
           ? null
           : (pendingToastBadge ?? this.pendingToastBadge),
+      pendingLevelUpEvent: clearLevelUpEvent
+          ? null
+          : (pendingLevelUpEvent ?? this.pendingLevelUpEvent),
     );
   }
 }

@@ -7,6 +7,10 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
   final ApiClient? _injectedClient;
   ApiClient get _apiClient => _injectedClient ?? ApiClient();
 
+  int _lastCelebratedPreJobLevel = 1;
+  int _lastCelebratedPostHireLevel = 1;
+  int _levelUpCounter = 0;
+
   CareerNotifier([ApiClient? apiClient])
       : _injectedClient = apiClient,
         super(_initialProfile()) {
@@ -30,9 +34,13 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
     return UserCareerProfile(
       characterName: 'Ijul',
       targetRole: 'Fresh Graduate Professional',
-      level: 2,
+      level: 1,
       currentXp: 180,
-      totalXpEarned: 430,
+      preJobLevel: 1,
+      preJobXp: 180,
+      postHireLevel: 1,
+      postHireXp: 150,
+      totalXpEarned: 330,
       streakDays: 5,
       latestAtsScore: null,
       applicationsSent: 3,
@@ -309,6 +317,13 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
   void clearPendingToastBadge() {
     if (state.pendingToastBadge != null) {
       state = state.copyWith(clearToastBadge: true);
+    }
+  }
+
+  /// Consume one-shot level-up splash event so it never replays on rebuilds or hot reload
+  void consumeLevelUpEvent() {
+    if (state.pendingLevelUpEvent != null) {
+      state = state.copyWith(clearLevelUpEvent: true);
     }
   }
 
@@ -928,19 +943,51 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
     ImprovedCV? latestMergedCv,
     CareerBadge? pendingToastBadge,
   }) {
-    var level = state.level;
-    var currentXp = state.currentXp + xpToAdd;
+    final isHired = state.isHiredMode;
+    var preLevel = state.preJobLevel;
+    var preXp = state.preJobXp;
+    var postLevel = state.postHireLevel;
+    var postXp = state.postHireXp;
     final totalXp = state.totalXpEarned + xpToAdd;
 
-    while (currentXp >= (level * 250)) {
-      currentXp -= (level * 250);
-      level++;
+    LevelUpEvent? levelUpEvent;
+
+    if (isHired) {
+      postXp += xpToAdd;
+      while (postXp >= (postLevel * UserCareerProfile.postHireXpStep)) {
+        postXp -= (postLevel * UserCareerProfile.postHireXpStep);
+        postLevel++;
+      }
+      if (postLevel > _lastCelebratedPostHireLevel) {
+        _lastCelebratedPostHireLevel = postLevel;
+        levelUpEvent = LevelUpEvent(
+          newLevel: postLevel,
+          careerMode: 'hired',
+          eventId: ++_levelUpCounter,
+        );
+      }
+    } else {
+      preXp += xpToAdd;
+      while (preXp >= (preLevel * UserCareerProfile.preJobXpStep)) {
+        preXp -= (preLevel * UserCareerProfile.preJobXpStep);
+        preLevel++;
+      }
+      if (preLevel > _lastCelebratedPreJobLevel) {
+        _lastCelebratedPreJobLevel = preLevel;
+        levelUpEvent = LevelUpEvent(
+          newLevel: preLevel,
+          careerMode: 'job_hunt',
+          eventId: ++_levelUpCounter,
+        );
+      }
     }
 
     state = state.copyWith(
       targetRole: updatedTargetRole ?? state.targetRole,
-      level: level,
-      currentXp: currentXp,
+      preJobLevel: preLevel,
+      preJobXp: preXp,
+      postHireLevel: postLevel,
+      postHireXp: postXp,
       totalXpEarned: totalXp,
       streakDays: updatedStreak ?? state.streakDays,
       quests: updatedQuests ?? state.quests,
@@ -954,6 +1001,7 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
           needsQuarterlyReminder ?? state.needsQuarterlyReminder,
       latestMergedCv: latestMergedCv ?? state.latestMergedCv,
       pendingToastBadge: pendingToastBadge,
+      pendingLevelUpEvent: levelUpEvent,
     );
   }
 }
