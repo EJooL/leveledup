@@ -160,9 +160,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
   Widget build(BuildContext context) {
     final scanState = ref.watch(cvScanProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
+    return Material(
+      color: AppColors.background,
+      child: SafeArea(
         child: Builder(
           builder: (context) {
             if (scanState.isBusy) {
@@ -592,30 +592,54 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(color: AppColors.border),
                       ),
-                      child: Text(
-                        result.isIndonesian
-                            ? '🇮🇩 Indonesian CV Evaluation'
-                            : '🇬🇧 English CV Evaluation',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.white,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.translate_rounded,
+                            size: 13,
+                            color: AppColors.terracottaBright,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              result.isIndonesian
+                                  ? 'Indonesian CV Evaluation'
+                                  : 'English CV Evaluation',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.white,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => ref.read(cvScanProvider.notifier).resetScanner(),
-                    child: const Text(
-                      'New Scan ↺',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.terracottaBright,
-                      ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'New Scan',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.terracottaBright,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.refresh_rounded,
+                          size: 14,
+                          color: AppColors.terracottaBright,
+                        ),
+                      ],
                     ),
                   ),
                 ],

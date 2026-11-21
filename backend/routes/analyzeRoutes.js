@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { analyzeCv } = require('../services/aiAnalysisService');
 const { encryptToken, generateScanToken } = require('../services/tokenService');
+const { formatBilingualError, resolveRequestLanguage } = require('../services/bilingualValidation');
 const { pool } = require('../config/db');
 
 /**
@@ -11,14 +12,17 @@ const { pool } = require('../config/db');
  */
 router.post('/', async (req, res, next) => {
   try {
-    const { text, fileName = 'CV.pdf', deviceId = null, numPages = 1, hasPhoto = false } = req.body;
+    const { text, fileName = 'CV.pdf', deviceId = null, numPages = 1, hasPhoto = false, language } = req.body;
     const effectiveDeviceId = deviceId || req.headers['x-device-id'] || null;
 
     if (!text || typeof text !== 'string' || text.trim().length < 80) {
-      return res.status(400).json({
-        error: 'Teks CV tidak valid atau terlalu pendek (minimal 80 karakter teks diperlukan untuk analisis).',
-        code: 'TEXT_TOO_SHORT',
+      const lang = resolveRequestLanguage({
+        language,
+        text: typeof text === 'string' ? text : '',
+        acceptLanguage: req.headers['accept-language'],
       });
+      const { status, body } = formatBilingualError('TEXT_TOO_SHORT', lang);
+      return res.status(status).json(body);
     }
 
     const cleanText = text.trim();

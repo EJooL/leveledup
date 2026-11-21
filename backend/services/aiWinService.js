@@ -1,5 +1,12 @@
 const { ai, isAiAvailable } = require('../config/ai');
-const { detectCvLanguage } = require('./ruleBasedService');
+const { validateWinInput, normalizeLanguage } = require('./bilingualValidation');
+const {
+  generateJsonWithGemini,
+  hasQuantifiedMetric,
+  hasBracketPlaceholder,
+  sanitizeWinBulletResult,
+  isBiasLine,
+} = require('./aiGuardrails');
 
 const CATEGORY_VERBS = {
   en: {
@@ -26,7 +33,7 @@ LANGUAGE RULE:
 Write the output STAR bullet strictly in **${langName}**!
 
 ZERO-HALLUCINATION POLICY (CRITICAL):
-1. NEVER invent or fabricate any numbers, percentages, currency amounts, or company names that the user did not provide.
+1. NEVER invent or fabricate any numbers, percentages, currency amounts, dates, or company names that the user did not provide.
 2. If the user provided a specific metric in "impactMetric", incorporate that EXACT metric naturally.
 3. If the user did NOT provide a number or measurable metric, you MUST insert a bracketed placeholder such as ${isId ? '[X]%, [jumlah], atau [metrik dampak]' : '[X]%, [number], or [target metric]'} so the user can fill in their true number later.
 4. Keep the bullet to 1 concise, high-impact sentence following the STAR pattern: Strong Action Verb + Task/Context + Quantified Result (or [placeholder]).
@@ -43,20 +50,17 @@ Return ONLY valid JSON matching:
  * Deterministic Zero-Hallucination STAR bullet generator (Bilingual: 'id' or 'en').
  * Never invents numbers; uses [placeholder] brackets when metrics are omitted.
  */
-function generateFallbackStarBullet({ title, impactMetric = '', category = 'project_delivery', language }) {
-  const cleanTitle = (title || '').trim().replace(/^[•\-*]\s*/, '').replace(/\.$/, '');
-  const cleanImpact = (impactMetric || '').trim().replace(/\.$/, '');
-  const detectedLang = language === 'id' || language === 'en'
-    ? language
-    : detectCvLanguage(`${cleanTitle} ${cleanImpact}`);
-  const isId = detectedLang === 'id';
+function generateFallbackStarBullet(input = {}) {
+  const { title, impactMetric, category, language } = validateWinInput(input);
+  const cleanTitle = title.replace(/^[•\-*]\s*/, '').replace(/\.$/, '');
+  const cleanImpact = impactMetric.replace(/\.$/, '');
+  const isId = language === 'id';
 
-  const verbs = (CATEGORY_VERBS[detectedLang] && CATEGORY_VERBS[detectedLang][category])
-    || CATEGORY_VERBS[detectedLang].project_delivery;
+  const verbs =
+    (CATEGORY_VERBS[language] && CATEGORY_VERBS[language][category]) ||
+    CATEGORY_VERBS[language].project_delivery;
   const actionVerb = verbs[0];
 
-  // Check if title already starts with a strong verb or if we should polish it
-  const lowerTitle = cleanTitle.toLowerCase();
   const startsWithPassiveId = /^(bertanggung\s+jawab|membantu|melakukan|mengerjakan|ikut\s+serta)\s+/i;
   const startsWithPassiveEn = /^(responsible\s+for|assisted\s+in|helped\s+with|worked\s+on|participated\s+in)\s+/i;
 
@@ -69,13 +73,11 @@ function generateFallbackStarBullet({ title, impactMetric = '', category = 'proj
     coreAction = coreAction.charAt(0).toUpperCase() + coreAction.slice(1);
   }
 
-  const hasNumberInTitleOrImpact = /\d+%|\b\d+([.,]\d+)?\s*(x|k|ribu|juta|users|pengguna|klien|clients|proyek|projects|jam|hours|hari|days|minggu|weeks|bulan|months|rupiah|idr|usd|leads|transaksi|laporan|reports)\b/i.test(
-    `${coreAction} ${cleanImpact}`
-  );
+  const hasMetricInInput = hasQuantifiedMetric(`${coreAction} ${cleanImpact}`);
 
   let starBullet = '';
   if (cleanImpact.length > 0) {
-    if (hasNumberInTitleOrImpact || /\[.+\]/.test(cleanImpact)) {
+    if (hasMetricInInput || hasBracketPlaceholder(cleanImpact)) {
       starBullet = isId
         ? `${coreAction}, menghasilkan dampak terukur berupa ${cleanImpact}.`
         : `${coreAction}, delivering measurable impact of ${cleanImpact}.`;
@@ -84,7 +86,7 @@ function generateFallbackStarBullet({ title, impactMetric = '', category = 'proj
         ? `${coreAction}, meningkatkan ${cleanImpact} sebesar [X]%.`
         : `${coreAction}, improving ${cleanImpact} by [X]%.`;
     }
-  } else if (hasNumberInTitleOrImpact || /\[.+\]/.test(coreAction)) {
+  } else if (hasMetricInInput || hasBracketPlaceholder(coreAction)) {
     starBullet = `${coreAction}.`;
   } else {
     starBullet = isId
@@ -92,29 +94,24 @@ function generateFallbackStarBullet({ title, impactMetric = '', category = 'proj
       : `${coreAction}, improving overall outcome efficiency by [X]% across [target metric].`;
   }
 
-  return {
-    starBullet,
-    language: detectedLang,
-    hasPlaceholder: /\[.+\]/.test(starBullet),
+  return sanitizeWinBulletResult(starBullet, {
+    title: cleanTitle,
+    impactMetric: cleanImpact,
+    lang: language,
     engine: 'rule-based',
-  };
+  });
 }
 
 /**
  * Convert a user's logged achievement into an ATS-ready STAR bullet via Gemini or fallback.
+ * @param {{ title: string, impactMetric?: string, category?: string, language?: string, _aiClient?: object, models?: string[], timeoutMs?: number }} input
  */
-async function generateStarBullet({ title, impactMetric = '', category = 'project_delivery', language }) {
-  const detectedLang = language === 'id' || language === 'en'
-    ? language
-    : detectCvLanguage(`${title || ''} ${impactMetric || ''}`);
+async function generateStarBullet(input = {}) {
+  const { title, impactMetric, category, language } = validateWinInput(input);
+  const aiClient = input._aiClient || (isAiAvailable() ? ai : null);
 
-  if (!isAiAvailable()) {
-    return generateFallbackStarBullet({
-      title,
-      impactMetric,
-      category,
-      language: detectedLang,
-    });
+  if (!aiClient) {
+    return generateFallbackStarBullet({ title, impactMetric, category, language });
   }
 
   try {
@@ -122,50 +119,29 @@ async function generateStarBullet({ title, impactMetric = '', category = 'projec
 Achievement: ${title}
 Impact / Metric provided by user: ${impactMetric || '(None provided — use bracketed [placeholder] for missing metrics)'}
 Category: ${category}
-Language: ${detectedLang === 'id' ? 'Bahasa Indonesia' : 'English'}`;
+Language: ${language === 'id' ? 'Bahasa Indonesia' : 'English'}`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+    const { parsed } = await generateJsonWithGemini({
+      aiClient,
       contents: prompt,
-      config: {
-        systemInstruction: buildWinSystemPrompt(detectedLang),
-        responseMimeType: 'application/json',
-      },
+      systemInstruction: buildWinSystemPrompt(language),
+      models: input.models,
+      timeoutMs: input.timeoutMs,
     });
 
-    const outputText =
-      response.text ||
-      (response.candidates && response.candidates[0]?.content?.parts[0]?.text);
-    if (!outputText) {
-      throw new Error('Empty response from Gemini win bullet generator');
-    }
-
-    const parsed = JSON.parse(outputText);
-    if (!parsed.starBullet || typeof parsed.starBullet !== 'string') {
+    if (!parsed || typeof parsed.starBullet !== 'string' || !parsed.starBullet.trim()) {
       throw new Error('Invalid JSON structure from Gemini win bullet generator');
     }
 
-    // Enforce Zero-Hallucination: if user gave no numbers in title or impactMetric, ensure placeholder exists
-    const userHadNumber = /\d/.test(`${title || ''} ${impactMetric || ''}`);
-    let bullet = parsed.starBullet.trim();
-    if (!userHadNumber && !/\[.+\]/.test(bullet)) {
-      bullet = bullet.replace(/\.$/, '') + (detectedLang === 'id' ? ' sebesar [X]%.' : ' by [X]%.');
-    }
-
-    return {
-      starBullet: bullet,
-      language: detectedLang,
-      hasPlaceholder: /\[.+\]/.test(bullet),
-      engine: 'gemini',
-    };
-  } catch (err) {
-    console.warn(`[AI Win Bullet Warning] Gemini failed (${err.message}). Using deterministic STAR bullet.`);
-    return generateFallbackStarBullet({
+    return sanitizeWinBulletResult(parsed.starBullet, {
       title,
       impactMetric,
-      category,
-      language: detectedLang,
+      lang: language,
+      engine: 'gemini',
     });
+  } catch (err) {
+    console.warn(`[AI Win Bullet Warning] Gemini failed (${err.message}). Using deterministic STAR bullet.`);
+    return generateFallbackStarBullet({ title, impactMetric, category, language });
   }
 }
 
@@ -174,32 +150,54 @@ Language: ${detectedLang === 'id' ? 'Bahasa Indonesia' : 'English'}`;
  * Inserts new STAR bullets at the top of the Experience/Projects section.
  */
 function mergeWinsIntoCvObject(baseCv, winsToMerge = []) {
-  const isId = (baseCv && baseCv.language === 'id') ||
-    (winsToMerge[0] && winsToMerge[0].language === 'id');
-  const lang = isId ? 'id' : 'en';
+  const rawLang = (baseCv && baseCv.language) || (winsToMerge[0] && winsToMerge[0].language) || 'en';
+  const lang = normalizeLanguage(rawLang);
+  const isId = lang === 'id';
+
+  const sanitizedContact =
+    Array.isArray(baseCv?.contact) && baseCv.contact.length > 0
+      ? baseCv.contact
+          .filter((c) => typeof c === 'string' && c.trim() && !isBiasLine(c))
+          .map((c) => c.trim())
+      : [];
 
   const cv = {
     language: lang,
-    name: (baseCv && baseCv.name) || 'Ijul',
-    title: (baseCv && baseCv.title) || (isId ? 'Profesional & Lulusan Baru' : 'Fresh Graduate Professional'),
-    contact: Array.isArray(baseCv?.contact) && baseCv.contact.length > 0
-      ? [...baseCv.contact]
-      : [
-          'ijul@leveledup.id',
-          '+62 812 XXXX XXXX',
-          isId ? 'Indonesia' : 'Indonesia (Open to Remote)',
-          'linkedin.com/in/ijul',
-        ],
-    summary: (baseCv && baseCv.summary) || (isId
-      ? 'Profesional berorientasi hasil dengan rekam jejak pencapaian terukur dalam eksekusi proyek, kolaborasi tim, dan peningkatan proses kerja sebesar [X]%.'
-      : 'Results-driven professional with a documented track record of delivering measurable project outcomes, workflow improvements, and [X]% efficiency gains.'),
+    name:
+      (baseCv && typeof baseCv.name === 'string' && baseCv.name.trim()) ||
+      (isId ? '[Nama Lengkap]' : '[Full Name]'),
+    title:
+      (baseCv && typeof baseCv.title === 'string' && baseCv.title.trim()) ||
+      (isId ? 'Profesional & Lulusan Baru' : 'Fresh Graduate Professional'),
+    contact:
+      sanitizedContact.length > 0
+        ? sanitizedContact
+        : [
+            '[email@domain.com]',
+            '[+62 8XX XXXX XXXX]',
+            isId ? 'Indonesia' : 'Indonesia (Open to Remote)',
+            isId ? 'linkedin.com/in/[profil-anda]' : 'linkedin.com/in/[your-profile]',
+          ],
+    summary:
+      (baseCv && typeof baseCv.summary === 'string' && baseCv.summary.trim()) ||
+      (isId
+        ? 'Profesional berorientasi hasil dengan rekam jejak pencapaian terukur dalam eksekusi proyek, kolaborasi tim, dan peningkatan proses kerja sebesar [X]%.'
+        : 'Results-driven professional with a documented track record of delivering measurable project outcomes, workflow improvements, and [X]% efficiency gains.'),
     sections: Array.isArray(baseCv?.sections)
-      ? baseCv.sections.map((s) => ({
-          heading: s.heading,
-          bullets: Array.isArray(s.bullets) ? [...s.bullets] : [],
-        }))
+      ? baseCv.sections
+          .filter((s) => s && typeof s === 'object')
+          .map((s) => ({
+            heading: typeof s.heading === 'string' && s.heading.trim() ? s.heading.trim() : (isId ? 'Pengalaman Profesional' : 'Professional Experience'),
+            bullets: Array.isArray(s.bullets)
+              ? s.bullets
+                  .filter((b) => typeof b === 'string' && b.trim() && !isBiasLine(b))
+                  .map((b) => b.trim())
+              : [],
+          }))
       : [],
-    changes: Array.isArray(baseCv?.changes) ? [...baseCv.changes] : [],
+    changes: Array.isArray(baseCv?.changes)
+      ? baseCv.changes.filter((c) => typeof c === 'string' && c.trim()).map((c) => c.trim())
+      : [],
   };
 
   if (cv.sections.length === 0) {
@@ -236,8 +234,8 @@ function mergeWinsIntoCvObject(baseCv, winsToMerge = []) {
   const existingBullets = cv.sections[targetIdx].bullets;
   const newBullets = [];
 
-  for (const win of winsToMerge) {
-    const bullet = (win.starBullet || win.star_bullet || win.title || '').trim();
+  for (const win of Array.isArray(winsToMerge) ? winsToMerge : []) {
+    const bullet = String(win?.starBullet || win?.star_bullet || win?.title || '').trim();
     if (bullet && !existingBullets.includes(bullet) && !newBullets.includes(bullet)) {
       newBullets.push(bullet);
     }
@@ -264,5 +262,5 @@ module.exports = {
   generateStarBullet,
   generateFallbackStarBullet,
   mergeWinsIntoCvObject,
+  buildWinSystemPrompt,
 };
-

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const upload = require('../middleware/upload');
 const { parsePdfBuffer } = require('../services/pdfService');
+const { formatBilingualError, resolveRequestLanguage } = require('../services/bilingualValidation');
 
 /**
  * POST /api/parse
@@ -10,10 +11,12 @@ const { parsePdfBuffer } = require('../services/pdfService');
 router.post('/', upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({
-        error: 'File tidak dikirim. Harap sertakan file PDF pada form-data dengan key "file".',
-        code: 'FILE_MISSING',
+      const lang = resolveRequestLanguage({
+        language: req.body && req.body.language,
+        acceptLanguage: req.headers['accept-language'],
       });
+      const { status, body } = formatBilingualError('FILE_MISSING', lang);
+      return res.status(status).json(body);
     }
 
     const { buffer, originalname } = req.file;

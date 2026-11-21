@@ -5,7 +5,7 @@
 Unlike one-off resume checkers that you abandon once you submit an application, **LeveledUp treats your CV as a living document**:
 
 ```text
-Scan CV (PDF) ──► Fix ATS Flaws & Skill Gaps ──► "I got the job 🎉" (First 90 Days)
+Scan CV (PDF) ──► Fix ATS Flaws & Skill Gaps ──► "I got the job" (First 90 Days)
       ▲                                                        │
       │                                                        ▼
 Export Updated PDF ◄── Merge STAR Bullets ("Add to my CV") ◄── Log Win (Brag Doc)
@@ -47,7 +47,6 @@ Built for **both** job seekers (projects, internships, campus leadership) and em
 1. **Log a Win**: Enter what you achieved, an optional measurable metric, and pick a role-agnostic category (*Project & Delivery*, *Metrics & Growth*, *Process & Quality*, or *Leadership & Teamwork*).
 2. **Instant STAR Bullet Conversion**: Gemini (with bilingual `ID`/`EN` rule-based fallback) turns your note into a polished STAR resume bullet — using `[placeholder]` tags if no metric was provided.
 3. **Add to My CV & Export PDF**: Select one or more saved wins, tap **`Add Selected to My CV`**, and download your updated **Living CV (`.pdf`)** immediately via **`Download Updated PDF CV (.pdf)`**.
-4. **3-Month Living-CV Reminder**: Reminds you every 90 days to log new accomplishments so your resume is always ready for reviews, promotions, or new opportunities.
 
 ---
 
@@ -57,7 +56,7 @@ Built for **both** job seekers (projects, internships, campus leadership) and em
   - **`Verified by Scan`**: Tasks like *Run Your First ATS Scan*, *Purge Personal Bias Data*, and flaw-specific quests (e.g., *Add measurable results to 3 bullets*) cannot be checked off manually — they auto-complete only when a re-scan proves the issue is fixed.
   - **`Self-reported`**: Supporting tasks (e.g., updating your LinkedIn headline, showcasing 3 portfolio projects, sending 5 applications) can be checked off manually or expanded via **Add Self-Reported Goal**.
 - **Role-Agnostic Skill Gap**: Replaces generic skill trees with concrete action steps for missing keywords in your target role (covering *Data Analyst*, *Digital Marketing Specialist*, *Accounting & Finance Associate*, *UI/UX Designer*, *Product Manager*, *Human Resources & People Ops*, *Software Engineer*, and *Mobile Developer*), complete with copyable sample STAR bullets in English or Bahasa Indonesia.
-- **Got the Job? Switch Modes in One Tap**: Tap **`I got the job 🎉`** on **Home** or **Progress** to activate your **First 90 Days Onboarding Checklist** (*meet manager & define 30/60/90 goals, document first deliverable, log & merge your first work win into your living CV, request 30-day feedback*).
+- **Got the Job? Switch Modes in One Tap**: Tap **`I got the job`** on **Home** or **Progress** to activate your **First 90 Days Onboarding Checklist** (*meet manager & define 30/60/90 goals, document first deliverable, log & merge your first work win into your living CV, request 30-day feedback*).
 
 ---
 
@@ -81,7 +80,7 @@ cp .env.example .env
 # Initialize/sync all 8 MySQL tables in leveledup_db (starts XAMPP MySQL first)
 npm run init-db
 
-# Verify all 64 automated API & MySQL integration assertions pass
+# Verify all 96 automated API, MySQL & AI guardrail assertions pass
 npm test
 
 # Start the API server on http://localhost:5000
@@ -105,7 +104,7 @@ flutter run -d chrome
 | Component | Stack / Details |
 | :--- | :--- |
 | **Frontend** | Flutter, Riverpod (`flutter_riverpod`), Dio, Google Fonts (`Poppins`, `JetBrains Mono`), Pure-Dart PDF 1.4 Generator |
-| **Backend** | Node.js, Express, `unpdf` (text + image/photo detection), `@google/genai` (`gemini-2.5-flash`), AES-256-GCM token encryption |
+| **Backend** | Node.js, Express, `unpdf` (text + page-1 embedded photo detection), `@google/genai` (`gemini-2.5-flash`) with zero-hallucination guardrails & bilingual validation, AES-256-GCM token encryption |
 | **Database** | MySQL (`leveledup_db`) — 8 tables defined in [backend/sql/schema.sql](backend/sql/schema.sql) |
 | **Identity** | Zero-friction device-scoped UUID (`x-device-id` header stored via `SharedPreferences`) implemented in [ApiClient](mobile/lib/core/network/api_client.dart) |
 

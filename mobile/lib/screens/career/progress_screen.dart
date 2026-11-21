@@ -126,20 +126,59 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
     if (msg != null) {
       final isWinQuest =
           quest.verificationType == QuestVerificationType.winVerified;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: AppColors.surfaceElevated,
-          action: widget.onNavigateTab != null
-              ? SnackBarAction(
-                  label: isWinQuest ? 'Open Wins' : 'Open Scanner',
-                  textColor: AppColors.terracottaBright,
-                  onPressed: () =>
-                      widget.onNavigateTab!(isWinQuest ? 2 : 1),
-                )
-              : null,
-        ),
-      );
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.surfaceElevated,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            content: Row(
+              children: [
+                const Icon(
+                  Icons.verified_outlined,
+                  color: AppColors.terracottaBright,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    msg,
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ),
+                if (widget.onNavigateTab != null) ...[
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      widget.onNavigateTab!(isWinQuest ? 2 : 1);
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.terracottaBright,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      isWinQuest ? 'Open Wins' : 'Open Scanner',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
     }
   }
 
@@ -167,9 +206,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
           )
         : baseSkillGap;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
+    return Material(
+      color: AppColors.background,
+      child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
           child: Column(
@@ -272,7 +311,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    ElevatedButton(
+                    ElevatedButton.icon(
                       onPressed: () {
                         if (isHired) {
                           ref
@@ -292,8 +331,14 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                           vertical: 10,
                         ),
                       ),
-                      child: Text(
-                        isHired ? 'Job Hunt' : 'I got the job 🎉',
+                      icon: Icon(
+                        isHired
+                            ? Icons.work_outline_rounded
+                            : Icons.celebration_rounded,
+                        size: 15,
+                      ),
+                      label: Text(
+                        isHired ? 'Job Hunt' : 'I got the job',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
@@ -537,13 +582,26 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                               color: AppColors.emerald.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text(
-                              '✓ Fixed: ${fi.title}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.emerald,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_outline_rounded,
+                                  size: 13,
+                                  color: AppColors.emerald,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    'Fixed: ${fi.title}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.emerald,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         }).toList(),
@@ -863,13 +921,26 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                       color: AppColors.emerald.withValues(alpha: 0.4),
                     ),
                   ),
-                  child: Text(
-                    '✓ $kw',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.emerald,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_rounded,
+                        size: 13,
+                        color: AppColors.emerald,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          kw,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.emerald,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }).toList(),
@@ -921,36 +992,42 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.terracotta.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            gap.keyword,
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.terracottaBright,
+                    SizedBox(
+                      width: double.infinity,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.terracotta.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              gap.keyword,
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.terracottaBright,
+                              ),
                             ),
                           ),
-                        ),
-                        Text(
-                          gap.actionTypeLabel,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textMuted,
+                          Text(
+                            gap.actionTypeLabel,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textMuted,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(

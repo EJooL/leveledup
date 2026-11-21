@@ -1,6 +1,7 @@
 const http = require('http');
 const app = require('../server');
 const { pool } = require('../config/db');
+const { runGuardrailTests } = require('./aiGuardrails.test');
 
 const SAMPLE_PDF = `%PDF-1.4
 1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
@@ -497,6 +498,11 @@ Node.js, Express, MySQL, JavaScript, Git, Docker, REST API, CI/CD, Unit Testing,
         hiredMergeWinQuest && hiredMergeWinQuest.isCompleted === true,
       'First 90 Days win-verified quests are automatically verified from Brag Doc & Living CV actions'
     );
+
+    // -----------------------------------------------------------------
+    // TESTS 8-10: AI Guardrails, Schema Compliance & Bilingual Parity
+    // -----------------------------------------------------------------
+    await runGuardrailTests(assert);
 
   } finally {
     server.close();

@@ -83,9 +83,9 @@ class HomeDashboardScreen extends ConsumerWidget {
     final profile = ref.watch(careerProvider);
     final stageQuests = profile.activeModeQuests;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
+    return Material(
+      color: AppColors.background,
+      child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           child: Column(
@@ -111,7 +111,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          profile.characterName,
+                          'Hello, ${profile.characterName}!',
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w900,
@@ -122,6 +122,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 10),
                   // Subtle secondary XP pill
                   GestureDetector(
                     onTap: () => onNavigateTab(3),
@@ -417,17 +418,59 @@ class HomeDashboardScreen extends ConsumerWidget {
                     if (msg != null) {
                       final isWin = quest.verificationType ==
                           QuestVerificationType.winVerified;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(msg),
-                          backgroundColor: AppColors.surfaceElevated,
-                          action: SnackBarAction(
-                            label: isWin ? 'Open Wins' : 'Open Scanner',
-                            textColor: AppColors.terracottaBright,
-                            onPressed: () => onNavigateTab(isWin ? 2 : 1),
+                      ScaffoldMessenger.of(context)
+                        ..clearSnackBars()
+                        ..showSnackBar(
+                          SnackBar(
+                            backgroundColor: AppColors.surfaceElevated,
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 3),
+                            content: Row(
+                              children: [
+                                const Icon(
+                                  Icons.verified_outlined,
+                                  color: AppColors.terracottaBright,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    msg,
+                                    style: const TextStyle(
+                                      color: AppColors.white,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                TextButton(
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context)
+                                        .hideCurrentSnackBar();
+                                    onNavigateTab(isWin ? 2 : 1);
+                                  },
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: AppColors.terracottaBright,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: Text(
+                                    isWin ? 'Open Wins' : 'Open Scanner',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
+                        );
                     }
                   },
                 );

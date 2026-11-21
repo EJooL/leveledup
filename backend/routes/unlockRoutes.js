@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { decryptToken } = require('../services/tokenService');
+const { formatBilingualError, resolveRequestLanguage } = require('../services/bilingualValidation');
 const { pool } = require('../config/db');
 
 /**
@@ -9,13 +10,15 @@ const { pool } = require('../config/db');
  */
 router.post('/', async (req, res, next) => {
   try {
-    const { scanToken, token, code } = req.body;
+    const { scanToken, token, code, language } = req.body;
+    const reqLang = resolveRequestLanguage({
+      language,
+      acceptLanguage: req.headers['accept-language'],
+    });
 
     if (!code || typeof code !== 'string' || !code.trim()) {
-      return res.status(400).json({
-        error: 'Kode akses wajib diisi.',
-        code: 'CODE_REQUIRED',
-      });
+      const { status, body } = formatBilingualError('CODE_REQUIRED', reqLang);
+      return res.status(status).json(body);
     }
 
     const cleanCode = code.trim().toUpperCase();
@@ -37,18 +40,14 @@ router.post('/', async (req, res, next) => {
 
         // Check quota
         if (accessCodeRow.times_used >= accessCodeRow.max_uses) {
-          return res.status(402).json({
-            error: 'Batas kuota pemakaian kode akses ini telah habis.',
-            code: 'CODE_EXHAUSTED',
-          });
+          const { status, body } = formatBilingualError('CODE_EXHAUSTED', reqLang);
+          return res.status(status).json(body);
         }
 
         // Check expiration
         if (accessCodeRow.expires_at && new Date(accessCodeRow.expires_at) < new Date()) {
-          return res.status(402).json({
-            error: 'Masa berlaku kode akses ini telah kedaluwarsa.',
-            code: 'CODE_EXPIRED',
-          });
+          const { status, body } = formatBilingualError('CODE_EXPIRED', reqLang);
+          return res.status(status).json(body);
         }
 
         isValidCode = true;
@@ -62,10 +61,8 @@ router.post('/', async (req, res, next) => {
     }
 
     if (!isValidCode) {
-      return res.status(402).json({
-        error: 'Kode akses tidak valid atau tidak ditemukan.',
-        code: 'INVALID_ACCESS_CODE',
-      });
+      const { status, body } = formatBilingualError('INVALID_ACCESS_CODE', reqLang);
+      return res.status(status).json(body);
     }
 
     // 2. Decrypt token or fetch from database
@@ -139,10 +136,8 @@ router.post('/', async (req, res, next) => {
     }
 
     if (fullIssues.length === 0 && (!decryptedData || !decryptedData.issues)) {
-      return res.status(400).json({
-        error: 'Token analisis tidak valid atau kadaluwarsa.',
-        code: 'INVALID_TOKEN',
-      });
+      const { status, body } = formatBilingualError('INVALID_TOKEN', reqLang);
+      return res.status(status).json(body);
     }
 
     // 3. Increment code usage and mark scan as unlocked in MySQL

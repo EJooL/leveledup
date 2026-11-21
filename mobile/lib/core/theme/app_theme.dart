@@ -126,6 +126,20 @@ class AppTheme {
         color: AppColors.border,
         thickness: 1,
       ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.surfaceElevated,
+        contentTextStyle: GoogleFonts.poppins(
+          color: AppColors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+        actionTextColor: AppColors.terracottaBright,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: AppColors.border),
+        ),
+      ),
     );
   }
 }

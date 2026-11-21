@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { generateStarBullet, mergeWinsIntoCvObject } = require('../services/aiWinService');
+const { formatBilingualError, resolveRequestLanguage } = require('../services/bilingualValidation');
 
 function resolveDeviceId(req) {
   const fromHeader = req.headers['x-device-id'];
@@ -111,10 +112,13 @@ router.post('/', async (req, res, next) => {
     } = req.body || {};
 
     if (!title || typeof title !== 'string' || title.trim().length < 3) {
-      return res.status(400).json({
-        error: 'Judul pencapaian (achievement) wajib diisi minimal 3 karakter.',
-        code: 'WIN_TITLE_REQUIRED',
+      const reqLang = resolveRequestLanguage({
+        language,
+        text: typeof title === 'string' ? title : '',
+        acceptLanguage: req.headers['accept-language'],
       });
+      const { status, body } = formatBilingualError('WIN_TITLE_REQUIRED', reqLang);
+      return res.status(status).json(body);
     }
 
     const cleanTitle = title.trim();
@@ -286,10 +290,12 @@ router.post('/merge-cv', async (req, res, next) => {
     }
 
     if (winsToMerge.length === 0) {
-      return res.status(400).json({
-        error: 'Pilih minimal 1 pencapaian (Work Win) untuk digabungkan ke dalam CV Anda.',
-        code: 'NO_WINS_SELECTED',
+      const reqLang = resolveRequestLanguage({
+        language,
+        acceptLanguage: req.headers['accept-language'],
       });
+      const { status, body } = formatBilingualError('NO_WINS_SELECTED', reqLang);
+      return res.status(status).json(body);
     }
 
     // 4. Resolve base CV to merge into (request body -> scan_rewrites by scanToken -> latest scan_rewrites for deviceId -> skeleton)

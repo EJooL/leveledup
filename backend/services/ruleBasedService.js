@@ -9,6 +9,13 @@
  * 5. language_quality
  */
 
+const { detectTextLanguage, normalizeLanguage } = require('./bilingualValidation');
+const {
+  hasExplicitPhotoEvidence,
+  hasQuantifiedMetric,
+  sanitizeAnalysisResult,
+} = require('./aiGuardrails');
+
 const ROLE_KEYWORDS = {
   'Software Engineer': [
     'Git', 'CI/CD', 'REST API', 'Unit Testing', 'System Architecture',
@@ -58,31 +65,7 @@ const ROLE_KEYWORDS = {
  * @returns {'id' | 'en'}
  */
 function detectCvLanguage(text) {
-  const lower = (text || '').toLowerCase();
-  const idPatterns = [
-    /\bpengalaman\s+kerja\b/, /\bpendidikan\b/, /\bkeahlian\b/, /\bkemampuan\b/,
-    /\bringkasan\b/, /\btentang\s+saya\b/, /\bbertanggung\s+jawab\b/, /\btempat\b/,
-    /\btanggal\s+lahir\b/, /\bagama\b/, /\bstatus\s+pernikahan\b/, /\bbekerja\b/,
-    /\bperusahaan\b/, /\bmengelola\b/, /\bmembantu\b/, /\blulusan\b/, /\bsekarang\b/,
-    /\bpekerja\s+keras\b/, /\bdibawah\s+tekanan\b/, /\bdi\s+bawah\s+tekanan\b/,
-  ];
-  const enPatterns = [
-    /\bexperience\b/, /\beducation\b/, /\bskills\b/, /\bsummary\b/,
-    /\bresponsible\s+for\b/, /\buniversity\b/, /\bbachelor\b/, /\bpresent\b/,
-    /\bengineered\b/, /\bdeveloped\b/, /\bmanaged\b/, /\bdesigned\b/,
-    /\bcollaborated\b/, /\bprojects\b/, /\bcertifications\b/, /\bachievements\b/,
-  ];
-
-  let idScore = 0;
-  let enScore = 0;
-  for (const rx of idPatterns) {
-    if (rx.test(lower)) idScore++;
-  }
-  for (const rx of enPatterns) {
-    if (rx.test(lower)) enScore++;
-  }
-
-  return idScore > enScore ? 'id' : 'en';
+  return detectTextLanguage(text);
 }
 
 /**
@@ -141,13 +124,13 @@ function analyzeKeywords(text, role) {
  * @returns {object} Full analysis result
  */
 function analyzeWithRules(text, fileName = 'CV.pdf', options = {}) {
-  const lang = detectCvLanguage(text);
+  const lang = normalizeLanguage(options.language, text);
   const isId = lang === 'id';
+  const hasPhoto = hasExplicitPhotoEvidence(text, options);
   const issues = [];
 
   // 1. Personal Info Bias Checks (Strict evidence-only matching — no false positives on "image"/"photo")
-  const explicitPhotoTextRegex = /\b(pas\s*foto|pasfoto|foto\s*diri|foto\s*4x6|foto\s*3x4|photo\s*:\s*headshot|headshot\s*attached|foto\s*terlampir)\b/i;
-  if (options.hasPhoto === true || explicitPhotoTextRegex.test(text)) {
+  if (hasPhoto) {
     issues.push({
       id: 'photo',
       category: 'personal_info',
@@ -288,7 +271,7 @@ function analyzeWithRules(text, fileName = 'CV.pdf', options = {}) {
     });
   }
 
-  const hasNumbers = /\b\d+(\.\d+)?%|\b\d+\+\s*(users|clients|proyek|projects|pengguna|klien)\b/i.test(text);
+  const hasNumbers = hasQuantifiedMetric(text);
   if (!hasNumbers) {
     issues.push({
       id: 'no_metrics',
@@ -359,7 +342,7 @@ function analyzeWithRules(text, fileName = 'CV.pdf', options = {}) {
         : `Incorporate relevant skills you possess such as: ${keywordAnalysis.missing.slice(0, 3).join(', ')}.`,
       rewrite: {
         before: isId ? 'Keahlian: Pemrograman dasar' : 'Skills: General programming',
-        after: `Skills: ${keywordAnalysis.matched.slice(0, 3).concat(keywordAnalysis.missing.slice(0, 2)).join(', ')}`,
+        after: `${isId ? 'Keahlian' : 'Skills'}: ${keywordAnalysis.matched.slice(0, 3).concat(keywordAnalysis.missing.slice(0, 2)).join(', ')}`,
       },
     });
   }
@@ -380,7 +363,9 @@ function analyzeWithRules(text, fileName = 'CV.pdf', options = {}) {
     } else if (overallScore >= 60) {
       summary = 'CV Anda memiliki fondasi yang cukup baik, namun beberapa bagian masih bergaya daftar tugas pasif dan memerlukan tambahan kata kunci teknis.';
     } else {
-      summary = 'CV Anda memerlukan perbaikan penting, terutama penghapusan data pribadi sensitif (foto, TTL, agama, NIK) dan konversi tugas menjadi pencapaian terukur.';
+      summary = hasPhoto
+        ? 'CV Anda memerlukan perbaikan penting, terutama penghapusan data pribadi sensitif (foto, TTL, agama, NIK) dan konversi tugas menjadi pencapaian terukur.'
+        : 'CV Anda memerlukan perbaikan penting, terutama penghapusan data pribadi sensitif (seperti TTL, agama, status pernikahan, atau NIK) dan konversi tugas menjadi pencapaian terukur.';
     }
   } else {
     if (overallScore >= 80) {
@@ -392,25 +377,36 @@ function analyzeWithRules(text, fileName = 'CV.pdf', options = {}) {
     }
   }
 
-  return {
-    mode: 'global',
-    language: lang,
-    overallScore,
-    summary,
-    issues,
-    keywordMatch: {
-      jobTitle: keywordAnalysis.jobTitle,
-      matched: keywordAnalysis.matched,
-      missing: keywordAnalysis.missing,
-      missingCount: keywordAnalysis.missingCount,
-    },
-    meta: {
-      fileName,
+  return sanitizeAnalysisResult(
+    {
+      mode: 'global',
       language: lang,
-      analyzedAtLabel: isId ? 'Evaluasi Bahasa Indonesia' : 'English ATS Evaluation',
-      engine: 'rule-based',
+      overallScore,
+      summary,
+      issues,
+      keywordMatch: {
+        jobTitle: keywordAnalysis.jobTitle,
+        matched: keywordAnalysis.matched,
+        missing: keywordAnalysis.missing,
+        missingCount: keywordAnalysis.missingCount,
+      },
+      meta: {
+        fileName,
+        language: lang,
+        analyzedAtLabel: isId ? 'Evaluasi Bahasa Indonesia' : 'English ATS Evaluation',
+        engine: 'rule-based',
+      },
     },
-  };
+    {
+      text,
+      fileName,
+      lang,
+      hasPhoto,
+      engine: 'rule-based',
+      inferJobRole,
+      analyzeKeywords,
+    }
+  );
 }
 
 /**
@@ -422,7 +418,8 @@ function analyzeWithRules(text, fileName = 'CV.pdf', options = {}) {
  * @param {'id' | 'en'} language
  */
 function buildSkillGapActions(jobTitle, missingKeywords = [], matchedKeywords = [], language = 'en') {
-  const isId = language === 'id';
+  const normalizedLang = normalizeLanguage(language);
+  const isId = normalizedLang === 'id';
   const role = jobTitle || 'Professional';
   const defaultMissing = ROLE_KEYWORDS[role]
     ? ROLE_KEYWORDS[role].filter((k) => !matchedKeywords.includes(k))

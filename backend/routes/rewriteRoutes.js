@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { rewriteCv } = require('../services/aiRewriteService');
+const { formatBilingualError, resolveRequestLanguage } = require('../services/bilingualValidation');
 const { pool } = require('../config/db');
 
 /**
@@ -9,13 +10,16 @@ const { pool } = require('../config/db');
  */
 router.post('/', async (req, res, next) => {
   try {
-    const { scanToken, text, code, fileName = 'CV.pdf' } = req.body;
+    const { scanToken, text, code, fileName = 'CV.pdf', language } = req.body;
+    const reqLang = resolveRequestLanguage({
+      language,
+      text: typeof text === 'string' ? text : '',
+      acceptLanguage: req.headers['accept-language'],
+    });
 
     if (!text || typeof text !== 'string' || text.trim().length < 80) {
-      return res.status(400).json({
-        error: 'Teks CV tidak valid atau terlalu pendek (minimal 80 karakter teks diperlukan).',
-        code: 'TEXT_TOO_SHORT',
-      });
+      const { status, body } = formatBilingualError('TEXT_TOO_SHORT', reqLang);
+      return res.status(status).json(body);
     }
 
     // Validate authorization (either scan is unlocked or valid promo code is provided)
@@ -57,10 +61,8 @@ router.post('/', async (req, res, next) => {
     }
 
     if (!isAuthorized) {
-      return res.status(402).json({
-        error: 'Fitur Tulis Ulang CV memerlukan akses terbuka atau kode akses VIP yang valid.',
-        code: 'PAYMENT_REQUIRED',
-      });
+      const { status, body } = formatBilingualError('PAYMENT_REQUIRED', reqLang);
+      return res.status(status).json(body);
     }
 
     // Generate rewritten CV

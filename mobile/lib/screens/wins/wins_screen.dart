@@ -150,9 +150,9 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
     final wins = profile.workWins;
     final activeLivingCv = profile.latestMergedCv ?? scanState.rewrittenCv;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
+    return Material(
+      color: AppColors.background,
+      child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 36),
           child: Column(
@@ -220,68 +220,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 2. Periodic 3-Month Living-CV Reminder Banner
-              if (profile.needsQuarterlyReminder) ...[
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentGold.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: AppColors.accentGold.withValues(alpha: 0.45),
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.notifications_active_rounded,
-                        color: AppColors.accentGoldBright,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Quarterly Living-CV Reminder',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              profile.reminderMessage,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Dismiss reminder',
-                        onPressed: () => ref
-                            .read(careerProvider.notifier)
-                            .dismissQuarterlyReminder(),
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          size: 18,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // 3. Log Win Form Card
+              // 2. Log Win Form Card
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(

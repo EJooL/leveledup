@@ -51,7 +51,14 @@ class LeveledUpApp extends ConsumerWidget {
             opacity: animation,
             child: ScaleTransition(
               scale: scale,
-              child: child,
+              child: AnimatedBuilder(
+                animation: animation,
+                builder: (context, inner) => IgnorePointer(
+                  ignoring: animation.status != AnimationStatus.completed,
+                  child: inner,
+                ),
+                child: child,
+              ),
             ),
           );
         },

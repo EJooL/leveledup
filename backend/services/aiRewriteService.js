@@ -1,5 +1,14 @@
 const { ai, isAiAvailable } = require('../config/ai');
-const { inferJobRole, detectCvLanguage } = require('./ruleBasedService');
+const { inferJobRole } = require('./ruleBasedService');
+const { validateCvText, normalizeLanguage } = require('./bilingualValidation');
+const {
+  generateJsonWithGemini,
+  sanitizeRewriteResult,
+  isBiasLine,
+  isHeaderLikeBullet,
+  hasQuantifiedMetric,
+  hasBracketPlaceholder,
+} = require('./aiGuardrails');
 
 function buildRewriteSystemPrompt(lang) {
   const isId = lang === 'id';
@@ -13,13 +22,13 @@ You MUST write the entire rewritten CV (\`title\`, \`summary\`, \`sections[].hea
 
 CRITICAL RULES:
 1. ZERO-HALLUCINATION / ANTI-FABRICATION:
-   - NEVER fabricate numbers, companies, dates, or degrees that are not in the CV.
-   - If a metric or quantified result is missing, you MUST insert an explicit bracketed placeholder like ${isId ? '[X]%, [jumlah], atau [ukuran tim]' : '[X]%, [amount], or [team size]'} so the candidate can fill in their actual data.
+   - NEVER fabricate numbers, percentages, metrics, companies, dates, degrees, unmentioned sub-libraries/tools, or responsibilities not grounded in the original CV.
+   - If a metric or quantified result is missing from an experience bullet, you MUST insert an explicit bracketed placeholder like ${isId ? '[X]%, [jumlah], atau [metrik target]' : '[X]%, [number], or [target metric]'} so the candidate can fill in their actual data.
 2. REMOVE ALL BIAS DATA:
    - Strip out photos, age, date of birth (TTL), marital status, religion, gender, national ID (NIK), blood type, height/weight, and irrelevant hobbies.
 3. TRANSFORM PASSIVE DUTIES TO STAR ACHIEVEMENTS:
-   - Start bullets with strong action verbs (${isId ? 'Merancang, Mengoptimalkan, Memimpin, Mengembangkan, Mempercepat' : 'Architected, Engineered, Optimized, Spearheaded, Accelerated'}).
-   - Use: Strong Action Verb + Context + [Quantified Impact].
+   - Start experience bullets with strong action verbs (${isId ? 'Merancang, Mengoptimalkan, Memimpin, Mengembangkan, Mempercepat' : 'Architected, Engineered, Optimized, Spearheaded, Accelerated'}).
+   - Use: Strong Action Verb + Grounded Context + Quantified Impact (or [placeholder]).
 
 Return ONLY a valid JSON object matching this schema:
 {
@@ -31,15 +40,14 @@ Return ONLY a valid JSON object matching this schema:
       "email@example.com",
       "+62 812 XXXX XXXX",
       "${isId ? 'Jakarta, Indonesia' : 'Jakarta, Indonesia (Open to Remote)'}",
-      "linkedin.com/in/username",
-      "github.com/username"
+      "linkedin.com/in/username"
     ],
     "summary": "Impactful 2-3 sentence executive summary in ${langName}.",
     "sections": [
       {
         "heading": "${isId ? 'Pengalaman Profesional' : 'Professional Experience'}",
         "bullets": [
-          "${isId ? 'Mengembangkan dan meluncurkan [fitur] yang meningkatkan efisiensi sebesar [X]%.' : 'Developed and deployed [feature] resulting in [X]% improvement in [metric].'}"
+          "${isId ? 'Mengembangkan dan meluncurkan [fitur] yang meningkatkan efisiensi sebesar [X]%.' : 'Developed and deployed [feature] resulting in [X]% improvement in [target metric].'}"
         ]
       },
       {
@@ -51,7 +59,7 @@ Return ONLY a valid JSON object matching this schema:
       {
         "heading": "${isId ? 'Keahlian Teknis' : 'Technical Skills'}",
         "bullets": [
-          "${isId ? 'Bahasa & Framework: ...' : 'Languages & Frameworks: ...'}"
+          "${isId ? 'Keahlian Utama: ...' : 'Core Skills: ...'}"
         ]
       }
     ],
@@ -67,23 +75,22 @@ Return ONLY a valid JSON object matching this schema:
  * experience, education, and skills from [text] while upgrading passive lines
  * into STAR-method bullets with [placeholder] tags.
  */
-function generateFallbackRewrite(text) {
-  const lang = detectCvLanguage(text);
+function generateFallbackRewrite(text, options = {}) {
+  const safeText = typeof text === 'string' ? text : '';
+  const lang = normalizeLanguage(options.language, safeText);
   const isId = lang === 'id';
-  const role = inferJobRole(text);
+  const role = inferJobRole(safeText);
 
-  const rawLines = text
+  const rawLines = safeText
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean);
 
   // 1. Filter out personal bias lines (photo, TTL, religion, marital status, NIK)
-  const biasLineRx =
-    /^(pas\s*foto|foto\s*:|photo\s*:|tempat\s*[/,&]?\s*tanggal\s*lahir|tanggal\s*lahir|ttl\s*:|date\s*of\s*birth|dob\s*:|agama\s*:|religion\s*:|status\s*pernikahan|status\s*perkawinan|marital\s*status|nik\s*:|no\.?\s*ktp|jenis\s*kelamin|gender\s*:)/i;
-  const lines = rawLines.filter((l) => !biasLineRx.test(l));
+  const lines = rawLines.filter((l) => !isBiasLine(l));
 
   // 2. Extract Candidate Name & Title
-  let applicantName = 'Professional Candidate';
+  let applicantName = isId ? 'Kandidat Profesional' : 'Professional Candidate';
   if (
     lines.length > 0 &&
     lines[0].length < 48 &&
@@ -107,17 +114,19 @@ function generateFallbackRewrite(text) {
   }
 
   // 3. Extract Contact Info
-  const emailMatch = text.match(
+  const emailMatch = safeText.match(
     /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/
   );
-  const phoneMatch = text.match(/(\+62|08|62)[\d\s-]{8,15}/);
-  const linkedinMatch = text.match(/linkedin\.com\/in\/[a-zA-Z0-9_-]+/i);
+  const phoneMatch = safeText.match(/(\+62|08|62)[\d\s-]{8,15}/);
+  const linkedinMatch = safeText.match(/linkedin\.com\/in\/[a-zA-Z0-9_-]+/i);
 
   const contact = [
     emailMatch ? emailMatch[0] : '[email@domain.com]',
     phoneMatch ? phoneMatch[0].replace(/\s+/g, ' ').trim() : '[+62 8XX XXXX XXXX]',
     isId ? 'Indonesia' : 'Indonesia (Open to Remote)',
-    linkedinMatch ? linkedinMatch[0] : 'linkedin.com/in/[profil-anda]',
+    linkedinMatch
+      ? linkedinMatch[0]
+      : (isId ? 'linkedin.com/in/[profil-anda]' : 'linkedin.com/in/[your-profile]'),
   ];
 
   // 4. Bucket lines into Experience, Education, and Skills from the actual CV text
@@ -164,7 +173,12 @@ function generateFallbackRewrite(text) {
     const stripped = line.replace(/^[•\-*–—]\s*/, '').trim();
     if (stripped.length < 4 || stripped === applicantTitle) continue;
 
-    if (currentBucket === 'edu' || /\b(universitas|institut|politeknik|sekolah\s+tinggi|sma|smk|s1|d3|d4|bachelor|university|diploma|ipk|gpa)\b/i.test(stripped)) {
+    if (
+      currentBucket === 'edu' ||
+      /\b(universitas|institut|politeknik|sekolah\s+tinggi|sma|smk|s1|d3|d4|bachelor|university|diploma|ipk|gpa)\b/i.test(
+        stripped
+      )
+    ) {
       if (eduBullets.length < 5) eduBullets.push(stripped);
     } else if (currentBucket === 'skill') {
       if (skillBullets.length < 6) skillBullets.push(stripped);
@@ -203,51 +217,57 @@ function generateFallbackRewrite(text) {
     ? `Profesional di bidang ${applicantTitle} yang berorientasi pada hasil dengan rekam jejak dalam meningkatkan efisiensi operasional dan kualitas kerja. Terbukti mampu beradaptasi cepat, berkolaborasi lintas fungsi, dan mencapai target terukur sebesar [X]% secara konsisten.`
     : `Results-driven ${applicantTitle} with a proven track record of executing high-impact initiatives and optimizing operational workflows. Adept at cross-functional collaboration and delivering measurable improvements of [X]% against key performance targets.`;
 
-  return {
-    cv: {
-      language: isId ? 'id' : 'en',
-      name: applicantName,
-      title: applicantTitle,
-      contact,
-      summary: summaryText,
-      sections: [
-        {
-          heading: isId ? 'Pengalaman Profesional' : 'Professional Experience',
-          bullets: expBullets,
-        },
-        {
-          heading: isId ? 'Pendidikan' : 'Education',
-          bullets: eduBullets,
-        },
-        {
-          heading: isId ? 'Keahlian & Kompetensi' : 'Skills & Competencies',
-          bullets: skillBullets,
-        },
-      ],
-      changes: isId
-        ? [
-            'Menghapus data pribadi sensitif (pas foto, TTL, agama, status pernikahan, NIK) agar bebas bias dan lolos filter ATS.',
-            'Mengonversi poin pengalaman asli Anda menjadi kalimat aktif berpola STAR dengan penanda metrik [X]%.',
-            'Menyusun ulang struktur dokumen ke dalam format satu kolom bersih yang siap diunduh sebagai PDF.',
-          ]
-        : [
-            'Removed sensitive demographic fields (photo, DOB, religion, marital status) for global ATS compliance.',
-            'Upgraded your original experience bullets into action-driven STAR statements with [X]% metric placeholders.',
-            'Formatted resume into a clean single-column layout ready for direct PDF download.',
-          ],
+  return sanitizeRewriteResult(
+    {
+      cv: {
+        language: lang,
+        name: applicantName,
+        title: applicantTitle,
+        contact,
+        summary: summaryText,
+        sections: [
+          {
+            heading: isId ? 'Pengalaman Profesional' : 'Professional Experience',
+            bullets: expBullets,
+          },
+          {
+            heading: isId ? 'Pendidikan' : 'Education',
+            bullets: eduBullets,
+          },
+          {
+            heading: isId ? 'Keahlian & Kompetensi' : 'Skills & Competencies',
+            bullets: skillBullets,
+          },
+        ],
+        changes: isId
+          ? [
+              'Menghapus data pribadi sensitif (pas foto, TTL, agama, status pernikahan, NIK) agar bebas bias dan lolos filter ATS.',
+              'Mengonversi poin pengalaman asli Anda menjadi kalimat aktif berpola STAR dengan penanda metrik [X]%.',
+              'Menyusun ulang struktur dokumen ke dalam format satu kolom bersih yang siap diunduh sebagai PDF.',
+            ]
+          : [
+              'Removed sensitive demographic fields (photo, DOB, religion, marital status) for global ATS compliance.',
+              'Upgraded your original experience bullets into action-driven STAR statements with [X]% metric placeholders.',
+              'Formatted resume into a clean single-column layout ready for direct PDF download.',
+            ],
+      },
     },
-  };
+    { sourceText: safeText, lang, engine: 'rule-based' }
+  );
 }
 
 function _upgradeBulletToStar(line, isId) {
   let out = line;
+  if (isHeaderLikeBullet(out)) {
+    return out;
+  }
+
   if (isId) {
     out = out
       .replace(/^bertanggung\s+jawab\s+(dalam\s+|untuk\s+|atas\s+)?/i, 'Mengelola dan mengoptimalkan ')
       .replace(/^membantu\s+/i, 'Berkolaborasi aktif dalam ')
       .replace(/^melakukan\s+/i, 'Mengeksekusi ');
-    const hasMetric = /\d+%|\b\d+\s+(orang|klien|pelanggan|proyek|dokumen|data|hari|bulan)\b|\[.+\]/i.test(out);
-    if (!hasMetric && out.length > 25) {
+    if (!hasQuantifiedMetric(out) && !hasBracketPlaceholder(out) && out.length > 25) {
       out = out.replace(/\.$/, '') + ', meningkatkan efektivitas kerja sebesar [X]%.';
     }
   } else {
@@ -255,8 +275,7 @@ function _upgradeBulletToStar(line, isId) {
       .replace(/^responsible\s+for\s+/i, 'Spearheaded and optimized ')
       .replace(/^assisted\s+(in|with)\s+/i, 'Collaborated in executing ')
       .replace(/^worked\s+on\s+/i, 'Engineered and delivered ');
-    const hasMetric = /\d+%|\b\d+\+?\s+(users|clients|projects|endpoints|members)\b|\[.+\]/i.test(out);
-    if (!hasMetric && out.length > 25) {
+    if (!hasQuantifiedMetric(out) && !hasBracketPlaceholder(out) && out.length > 25) {
       out = out.replace(/\.$/, '') + ', improving overall efficiency by [X]%.';
     }
   }
@@ -266,50 +285,46 @@ function _upgradeBulletToStar(line, isId) {
 /**
  * Rewrite CV with AI (matching original CV language: 'en' or 'id') or fallback template
  * @param {string} text - CV text
+ * @param {object} [options] - { language?: string, _aiClient?: object, models?: string[], timeoutMs?: number }
  * @returns {Promise<object>} Rewritten CV
  */
-async function rewriteCv(text) {
-  const lang = detectCvLanguage(text);
+async function rewriteCv(text, options = {}) {
+  const { cleanText, language } = validateCvText(text, {
+    language: options.language,
+  });
+  const lang = normalizeLanguage(options.language, cleanText) || language;
+  const aiClient = options._aiClient || (isAiAvailable() ? ai : null);
 
-  if (!isAiAvailable()) {
-    return generateFallbackRewrite(text);
+  if (!aiClient) {
+    return generateFallbackRewrite(cleanText, { language: lang });
   }
 
   try {
-    const prompt = `Rewrite the following CV into an ATS-friendly structure in ${lang === 'id' ? 'Bahasa Indonesia' : 'English'}:\n\n=== ORIGINAL CV ===\n${text}\n=== END ===`;
+    const prompt = `Rewrite the following CV into an ATS-friendly structure in ${lang === 'id' ? 'Bahasa Indonesia' : 'English'}:\n\n=== ORIGINAL CV ===\n${cleanText}\n=== END ===`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+    const { parsed } = await generateJsonWithGemini({
+      aiClient,
       contents: prompt,
-      config: {
-        systemInstruction: buildRewriteSystemPrompt(lang),
-        responseMimeType: 'application/json',
-      },
+      systemInstruction: buildRewriteSystemPrompt(lang),
+      models: options.models,
+      timeoutMs: options.timeoutMs,
     });
 
-    const outputText =
-      response.text ||
-      (response.candidates && response.candidates[0]?.content?.parts[0]?.text);
-    if (!outputText) {
-      throw new Error('Empty response from AI rewrite model');
-    }
-
-    const parsed = JSON.parse(outputText);
-    if (!parsed.cv || !Array.isArray(parsed.cv.sections)) {
-      throw new Error('Invalid JSON structure returned by rewrite model');
-    }
-    parsed.cv.language = lang;
-
-    return parsed;
+    return sanitizeRewriteResult(parsed, {
+      sourceText: cleanText,
+      lang,
+      engine: 'gemini',
+    });
   } catch (err) {
     console.warn(
       `[AI Rewrite Warning] Gemini API call failed: ${err.message}. Using rule-based fallback rewrite.`
     );
-    return generateFallbackRewrite(text);
+    return generateFallbackRewrite(cleanText, { language: lang });
   }
 }
 
 module.exports = {
   rewriteCv,
   generateFallbackRewrite,
+  buildRewriteSystemPrompt,
 };

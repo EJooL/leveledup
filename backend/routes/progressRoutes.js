@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { buildSkillGapActions, detectCvLanguage } = require('../services/ruleBasedService');
+const { formatBilingualError, resolveRequestLanguage } = require('../services/bilingualValidation');
 
 function resolveDeviceId(req) {
   const fromHeader = req.headers['x-device-id'];
@@ -477,13 +478,15 @@ router.get('/', async (req, res, next) => {
 router.post('/quest-toggle', async (req, res, next) => {
   try {
     const deviceId = resolveDeviceId(req);
-    const { questKey } = req.body || {};
+    const { questKey, language } = req.body || {};
+    const reqLang = resolveRequestLanguage({
+      language,
+      acceptLanguage: req.headers['accept-language'],
+    });
 
     if (!questKey || typeof questKey !== 'string') {
-      return res.status(400).json({
-        error: 'questKey wajib disertakan.',
-        code: 'QUEST_KEY_REQUIRED',
-      });
+      const { status, body } = formatBilingualError('QUEST_KEY_REQUIRED', reqLang);
+      return res.status(status).json(body);
     }
 
     await syncAndLoadProgress(deviceId);
@@ -494,18 +497,16 @@ router.post('/quest-toggle', async (req, res, next) => {
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({
-        error: `Quest '${questKey}' tidak ditemukan.`,
-        code: 'QUEST_NOT_FOUND',
+      const { status, body } = formatBilingualError('QUEST_NOT_FOUND', reqLang, {
+        detail: questKey,
       });
+      return res.status(status).json(body);
     }
 
     const quest = rows[0];
     if (quest.verification_type !== 'self_reported') {
-      return res.status(400).json({
-        error: 'Quest ini diverifikasi otomatis dari hasil scan CV atau pencatatan Win dan tidak dapat dicentang manual.',
-        code: 'QUEST_NOT_MANUAL',
-      });
+      const { status, body } = formatBilingualError('QUEST_NOT_MANUAL', reqLang);
+      return res.status(status).json(body);
     }
 
     const nextState = !Boolean(quest.is_completed);
@@ -530,13 +531,15 @@ router.post('/quest-toggle', async (req, res, next) => {
 router.post('/mode', async (req, res, next) => {
   try {
     const deviceId = resolveDeviceId(req);
-    const { mode, displayName, targetRole } = req.body || {};
+    const { mode, displayName, targetRole, language } = req.body || {};
+    const reqLang = resolveRequestLanguage({
+      language,
+      acceptLanguage: req.headers['accept-language'],
+    });
 
     if (mode !== 'job_hunt' && mode !== 'hired') {
-      return res.status(400).json({
-        error: "Mode karir harus bernilai 'job_hunt' atau 'hired'.",
-        code: 'INVALID_CAREER_MODE',
-      });
+      const { status, body } = formatBilingualError('INVALID_CAREER_MODE', reqLang);
+      return res.status(status).json(body);
     }
 
     await pool.execute(

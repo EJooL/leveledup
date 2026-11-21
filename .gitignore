@@ -1,0 +1,12 @@
+# Local workflow & agent rules / planning notes
+progress.md
+.agents/
+AGENTS.md
+
+# Environment secrets & dependencies
+.env
+node_modules/
+
+# OS / Editor files
+.DS_Store
+Thumbs.db

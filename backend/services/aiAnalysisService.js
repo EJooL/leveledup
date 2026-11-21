@@ -1,5 +1,11 @@
 const { ai, isAiAvailable } = require('../config/ai');
-const { analyzeWithRules, detectCvLanguage } = require('./ruleBasedService');
+const { analyzeWithRules, inferJobRole, analyzeKeywords } = require('./ruleBasedService');
+const { validateCvText, normalizeLanguage } = require('./bilingualValidation');
+const {
+  generateJsonWithGemini,
+  hasExplicitPhotoEvidence,
+  sanitizeAnalysisResult,
+} = require('./aiGuardrails');
 
 function buildSystemInstruction(lang, hasPhoto) {
   const isId = lang === 'id';
@@ -15,18 +21,22 @@ ${isId ? 'Do NOT penalize the CV simply for being written in Bahasa Indonesia. I
 STRICT ANTI-HALLUCINATION DIAGNOSTIC RULE (CRITICAL):
 - Only report issues that are EXPLICITLY present in the provided CV text!
 - Embedded Photo Metadata Flag for this PDF: \`hasPhoto = ${Boolean(hasPhoto)}\`.
-- If \`hasPhoto\` is \`false\` and the CV text does not explicitly say "Pas Foto" or "Headshot attached", you are **STRICTLY FORBIDDEN** from reporting any issue about a photo or headshot!
+- If \`hasPhoto\` is \`false\` and the CV text does not explicitly say "Pas Foto" or "Headshot attached", you are **STRICTLY FORBIDDEN** from reporting any issue about a photo, portrait, profile picture, or headshot!
 - Similarly, do NOT report Date of Birth, Religion, Marital Status, or National ID (NIK) unless those exact fields actually appear in the CV text!
 
 Evaluate the candidate's CV strictly according to 5 ATS Pillars:
-1. personal_info: Only flag if actual personal bias fields (date/place of birth, age, marital status, religion, gender, national ID KTP/NIK, or embedded photo when \`hasPhoto=true\`) exist in the CV.
-2. ats_readability: Detect complex tables, multi-column layouts, unusual symbols, or overly brief content.
+1. personal_info: STRICTLY ONLY for actual personal bias / PII fields (date/place of birth, age, marital status, religion, gender, national ID KTP/NIK, or embedded photo when \`hasPhoto=true\`). NEVER put generic summaries or clichés under \`personal_info\`!
+2. ats_readability: Detect complex tables, multi-column layouts, unusual symbols, or overly brief content (< 150 words).
 3. keyword_match: Match against standard industry skills for the candidate's target job title.
-4. achievements: Flag passive duties ("Responsible for...", "Bertanggung jawab...") that lack the STAR method (Action Verb + Context + Quantified Metric).
-5. language_quality: Flag stiff phrasing, passive voice, and clichés ("hard working", "pekerja keras", "under pressure").
+4. achievements: Flag passive duties ("Responsible for...", "Bertanggung jawab...") or missing quantified metrics that lack the STAR method (Action Verb + Context + Quantified Metric).
+5. language_quality: Flag generic summaries, stiff phrasing, passive voice, and clichés ("hard working", "pekerja keras", "under pressure", "di bawah tekanan").
+
+PREFERRED CANONICAL ISSUE IDs (use when applicable):
+- \`photo\`, \`dob_age\`, \`marital_status\`, \`religion\`, \`national_id\`
+- \`too_short\`, \`duties\`, \`no_metrics\`, \`cliche_words\`, \`missing_core_keywords\`
 
 ZERO-HALLUCINATION POLICY FOR REWRITES:
-Do NOT fabricate numbers, metrics, or factual statements. When giving rewrite suggestions without existing metrics, use square bracket placeholders like ${isId ? '[X]% atau [jumlah]' : '[X]% or [team size]'}.
+Do NOT fabricate numbers, metrics, tools, companies, or factual statements not present in the CV. When giving rewrite suggestions without existing metrics, you MUST use square bracket placeholders like ${isId ? '[X]% atau [jumlah]' : '[X]% or [number]'}.
 
 SCORING RULES:
 - Initial score: 100
@@ -41,7 +51,7 @@ Return ONLY a valid JSON object matching this schema:
   "summary": "string in ${langName} explaining the overall readiness",
   "issues": [
     {
-      "id": "unique_issue_key",
+      "id": "canonical_issue_key",
       "category": "personal_info" | "ats_readability" | "keyword_match" | "achievements" | "language_quality",
       "severity": "critical" | "warning" | "suggestion",
       "title": "Short title in ${langName}",
@@ -49,7 +59,7 @@ Return ONLY a valid JSON object matching this schema:
       "fix": "Actionable step-by-step guidance in ${langName}",
       "rewrite": {
         "before": "Actual excerpt from the user's CV in ${langName}",
-        "after": "Professional rewrite after in ${langName}"
+        "after": "Professional rewrite in ${langName} with [placeholder] for missing metrics"
       }
     }
   ],
@@ -66,97 +76,50 @@ Return ONLY a valid JSON object matching this schema:
  * Analyze CV text using Gemini (matching CV language: 'en' or 'id') or fallback to Rule-Based engine
  * @param {string} text - CV text
  * @param {string} fileName - Uploaded file name
- * @param {object} options - { hasPhoto?: boolean }
+ * @param {object} options - { hasPhoto?: boolean, language?: string, _aiClient?: object, models?: string[], timeoutMs?: number }
  * @returns {Promise<object>} Analysis result
  */
 async function analyzeCv(text, fileName = 'CV.pdf', options = {}) {
-  const lang = detectCvLanguage(text);
-  const explicitPhotoTextRegex = /\b(pas\s*foto|pasfoto|foto\s*diri|foto\s*4x6|foto\s*3x4|photo\s*:\s*headshot|headshot\s*attached|foto\s*terlampir)\b/i;
-  const hasPhoto = Boolean(options.hasPhoto) || explicitPhotoTextRegex.test(text);
+  const { cleanText, language } = validateCvText(text, {
+    language: options.language,
+  });
+  const lang = normalizeLanguage(options.language, cleanText) || language;
+  const hasPhoto = hasExplicitPhotoEvidence(cleanText, options);
+  const aiClient = options._aiClient || (isAiAvailable() ? ai : null);
 
-  if (!isAiAvailable()) {
-    return analyzeWithRules(text, fileName, { hasPhoto });
+  if (!aiClient) {
+    return analyzeWithRules(cleanText, fileName, { hasPhoto, language: lang });
   }
 
   try {
-    const prompt = `Analyze the following CV content (Detected Language: ${lang === 'id' ? 'Bahasa Indonesia' : 'English'}, PDF Embedded Photo Detected: ${hasPhoto}):\n\n=== CV START ===\n${text}\n=== CV END ===`;
+    const prompt = `Analyze the following CV content (Detected Language: ${lang === 'id' ? 'Bahasa Indonesia' : 'English'}, PDF Embedded Photo Detected: ${hasPhoto}):\n\n=== CV START ===\n${cleanText}\n=== CV END ===`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+    const { parsed } = await generateJsonWithGemini({
+      aiClient,
       contents: prompt,
-      config: {
-        systemInstruction: buildSystemInstruction(lang, hasPhoto),
-        responseMimeType: 'application/json',
-      },
+      systemInstruction: buildSystemInstruction(lang, hasPhoto),
+      models: options.models,
+      timeoutMs: options.timeoutMs,
     });
 
-    const outputText =
-      response.text ||
-      (response.candidates && response.candidates[0]?.content?.parts[0]?.text);
-    if (!outputText) {
-      throw new Error('Empty response from AI model');
-    }
-
-    const parsed = JSON.parse(outputText);
-
-    parsed.mode = 'global';
-    parsed.language = lang;
-    parsed.issues = Array.isArray(parsed.issues) ? parsed.issues : [];
-
-    // Hard programmatic guard: strip any hallucinated photo issue if hasPhoto is false
-    if (!hasPhoto) {
-      parsed.issues = parsed.issues.filter((issue) => {
-        const idStr = (issue.id || '').toLowerCase();
-        const titleStr = (issue.title || '').toLowerCase();
-        const isPhotoIssue =
-          idStr.includes('photo') ||
-          idStr.includes('foto') ||
-          titleStr.includes('foto') ||
-          titleStr.includes('photo') ||
-          titleStr.includes('headshot');
-        return !isPhotoIssue;
-      });
-    }
-
-    // Recalculate score cleanly from verified issues
-    let score = 100;
-    for (const issue of parsed.issues) {
-      if (issue.severity === 'critical') score -= 11;
-      else if (issue.severity === 'warning') score -= 7;
-      else if (issue.severity === 'suggestion') score -= 3;
-    }
-    parsed.overallScore = Math.max(10, Math.min(100, score));
-
-    parsed.summary =
-      parsed.summary ||
-      (lang === 'id'
-        ? 'Hasil analisis ATS untuk CV Anda.'
-        : 'ATS diagnostic summary for your CV.');
-    parsed.keywordMatch = parsed.keywordMatch || {
-      jobTitle: 'Professional',
-      matched: [],
-      missing: [],
-      missingCount: 0,
-    };
-    parsed.meta = {
+    return sanitizeAnalysisResult(parsed, {
+      text: cleanText,
       fileName,
-      language: lang,
-      analyzedAtLabel:
-        lang === 'id'
-          ? 'Dianalisis AI Gemini (Bahasa Indonesia)'
-          : 'Analyzed by Gemini AI (English)',
+      lang,
+      hasPhoto,
       engine: 'gemini',
-    };
-
-    return parsed;
+      inferJobRole,
+      analyzeKeywords,
+    });
   } catch (err) {
     console.warn(
       `[AI Analysis Warning] Gemini API call failed: ${err.message}. Falling back to Rule-Based engine.`
     );
-    return analyzeWithRules(text, fileName, { hasPhoto });
+    return analyzeWithRules(cleanText, fileName, { hasPhoto, language: lang });
   }
 }
 
 module.exports = {
   analyzeCv,
+  buildSystemInstruction,
 };

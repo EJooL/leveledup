@@ -1,3 +1,15 @@
+> [!NOTE]
+> **ARCHIVAL DOCUMENT — PRE-REFACTOR MVP BASELINE**
+>
+> This specification reflects the **original pre-refactor MVP baseline** (gamified RPG Quest Log, Skill Tree, and early 5-table scanner design) and is preserved for historical context and visual design-system tokens (Obsidian Matte Dark `#09090B`, Warm Terracotta `#B5462F`, Emerald `#10B981`, Gold/Amber `#F59E0B`, `Poppins` + `JetBrains Mono`).
+>
+> **Do not treat this document as the current architecture reference.** LeveledUp now follows the **Living CV & Verified Outcomes** architecture:
+> - **4 Active Navigation Tabs:** `Home`, `Scanner`, `Wins` (role-agnostic Brag Doc, Zero-Hallucination STAR bullets, Living CV merge + PDF export), and `Progress` (chronological ATS Score History with `✓ Fixed:` diffs, `"I got the job 🎉"` First 90 Days mode, `scan_verified` / `win_verified` / `self_reported` verified quests, and bilingual Skill Gap action plans).
+> - **Current Sources of Truth:** See [`README.md`](README.md), [`AGENTS.md`](AGENTS.md), and [`backend/sql/schema.sql`](backend/sql/schema.sql) (8 active MySQL tables).
+> - **Retired / Gated Legacy Components:** `QuestLogScreen`, `SkillTreeScreen`, `QuestCard`, `XpLevelBanner`, and `ScoreRingWidget` have been removed; `Daily Check-In` remains preserved behind `ApiConstants.enableDailyCheckIn = false`.
+
+---
+
 # LeveledUp Mobile — Master Product, UI/UX Design System & Technical Specification (MVP)
 
 Comprehensive product specification, **UI/UX Design System (matched 1:1 to the official LeveledUp web reference)**, mobile architecture, backend REST API, and MySQL database schema for **LeveledUp Mobile**:

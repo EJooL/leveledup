@@ -1,16 +1,18 @@
 const { extractText, extractImages } = require('unpdf');
+const { createServiceError, normalizeLanguage } = require('./bilingualValidation');
 
 /**
  * Extracts text, page count, and checks whether a headshot/photo image is embedded on page 1
  * @param {Buffer} buffer - In-memory PDF buffer from multer
  * @param {string} fileName - Original uploaded file name
+ * @param {{ language?: string }} [options]
  * @returns {Promise<{ fileName: string, numPages: number, numChars: number, hasPhoto: boolean, text: string }>}
  */
-async function parsePdfBuffer(buffer, fileName = 'resume.pdf') {
+async function parsePdfBuffer(buffer, fileName = 'resume.pdf', options = {}) {
+  const lang = options && options.language ? normalizeLanguage(options.language) : 'id';
+
   if (!buffer || buffer.length === 0) {
-    const error = new Error('File tidak dikirim atau dokumen kosong.');
-    error.status = 400;
-    throw error;
+    throw createServiceError('FILE_MISSING', lang);
   }
 
   try {
@@ -26,11 +28,7 @@ async function parsePdfBuffer(buffer, fileName = 'resume.pdf') {
     const numChars = cleanedText.length;
 
     if (numChars < 80) {
-      const error = new Error(
-        'PDF tidak dapat dibaca atau berbasis scan gambar (< 80 karakter teks). Silakan unggah PDF berbasis teks asli.'
-      );
-      error.status = 422;
-      throw error;
+      throw createServiceError('PDF_UNREADABLE', lang);
     }
 
     // Check if Page 1 actually embeds a portrait/headshot raster image (60px..900px)
@@ -51,7 +49,7 @@ async function parsePdfBuffer(buffer, fileName = 'resume.pdf') {
     }
 
     return {
-      fileName,
+      fileName: typeof fileName === 'string' && fileName.trim() ? fileName.trim() : 'resume.pdf',
       numPages,
       numChars,
       hasPhoto,
@@ -60,9 +58,7 @@ async function parsePdfBuffer(buffer, fileName = 'resume.pdf') {
   } catch (err) {
     if (err.status) throw err;
     console.error('[PdfService] Error parsing PDF:', err);
-    const error = new Error(`Gagal membaca file PDF: ${err.message}`);
-    error.status = 422;
-    throw error;
+    throw createServiceError('PDF_PARSE_FAILED', lang, { detail: err.message });
   }
 }
 

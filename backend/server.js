@@ -9,6 +9,7 @@ const { testConnection } = require('./config/db');
 const { isAiAvailable } = require('./config/ai');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
+const { formatBilingualError, resolveRequestLanguage } = require('./services/bilingualValidation');
 
 // Route imports
 const parseRoutes = require('./routes/parseRoutes');
@@ -58,10 +59,11 @@ app.use('/api/progress', progressRoutes);
 
 // 404 Route Handler
 app.use((req, res, next) => {
-  res.status(404).json({
-    error: `Endpoint '${req.method} ${req.originalUrl}' tidak ditemukan.`,
-    code: 'NOT_FOUND',
+  const lang = resolveRequestLanguage({ acceptLanguage: req.headers['accept-language'] });
+  const { status, body } = formatBilingualError('NOT_FOUND', lang, {
+    detail: `${req.method} ${req.originalUrl}`,
   });
+  res.status(status).json(body);
 });
 
 // Centralized Error Handling

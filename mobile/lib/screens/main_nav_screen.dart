@@ -34,6 +34,10 @@ class _MainNavScreenState extends State<MainNavScreen>
       parent: _animController,
       curve: Curves.easeOutCubic,
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
+    });
   }
 
   @override
@@ -147,6 +151,7 @@ class _MainNavScreenState extends State<MainNavScreen>
         );
 
         return Scaffold(
+          backgroundColor: AppColors.background,
           body: AnimatedBuilder(
             animation: _fadeAnimation,
             builder: (context, child) {
