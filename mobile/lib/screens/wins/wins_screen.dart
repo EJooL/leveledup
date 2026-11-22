@@ -28,6 +28,19 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
   bool _isMergingCv = false;
   final Set<String> _selectedWinIds = {};
 
+  static String _shortBranchLabel(SkillBranch branch) {
+    switch (branch) {
+      case SkillBranch.technical:
+        return 'Delivery';
+      case SkillBranch.architecture:
+        return 'Quality';
+      case SkillBranch.leadership:
+        return 'Leadership';
+      case SkillBranch.globalOps:
+        return 'Metrics';
+    }
+  }
+
   @override
   void dispose() {
     _titleCtrl.dispose();
@@ -40,7 +53,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter what you achieved or delivered.'),
+          content: Text('Please enter what you accomplished.'),
           backgroundColor: AppColors.crimson,
         ),
       );
@@ -65,9 +78,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Converted to Zero-Hallucination STAR bullet & saved to Brag Doc!',
-          ),
+          content: Text('STAR bullet saved to your wins.'),
           backgroundColor: AppColors.emerald,
           duration: Duration(seconds: 2),
         ),
@@ -158,35 +169,22 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Header & Logged Wins Counter
+              // 1. Crisp Header & Logged Wins Counter
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'LIVING CV · BRAG DOC',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.terracottaBright,
-                            letterSpacing: 0.7,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Log Wins → STAR CV',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.white,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ],
+                  const Expanded(
+                    child: Text(
+                      'Work Wins',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.white,
+                        letterSpacing: -0.5,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -211,13 +209,12 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               const Text(
-                'Record achievements from any role (Data, Marketing, Finance, Design, HR, Engineering). Gemini turns each win into a Zero-Hallucination STAR bullet you can merge directly into your PDF CV.',
+                'Turn work achievements into CV bullets.',
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13,
                   color: AppColors.textSecondary,
-                  height: 1.45,
                 ),
               ),
               const SizedBox(height: 16),
@@ -242,7 +239,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           const Text(
-                            'Log a New Achievement',
+                            'New Win',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
@@ -286,9 +283,8 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                         fontSize: 13.5,
                       ),
                       decoration: const InputDecoration(
-                        labelText: 'What did you achieve, deliver, or solve?',
-                        hintText:
-                            'e.g. Automated monthly financial reconciliation / Launched SEO campaign',
+                        labelText: 'Achievement',
+                        hintText: 'What did you accomplish?',
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -299,15 +295,13 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                         fontSize: 13.5,
                       ),
                       decoration: const InputDecoration(
-                        labelText:
-                            'Measurable Impact / Metric (Leave blank for [placeholder])',
-                        hintText:
-                            'e.g. +32% organic leads · cut closing time by 2 days',
+                        labelText: 'Impact (optional)',
+                        hintText: 'Numbers or impact (optional)',
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'CATEGORY (ALL FIELDS)',
+                      'CATEGORY',
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w800,
@@ -322,7 +316,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                       children: SkillBranch.values.map((branch) {
                         final isSel = branch == _selectedBranch;
                         return ChoiceChip(
-                          label: Text(branch.title),
+                          label: Text(_shortBranchLabel(branch)),
                           selected: isSel,
                           showCheckmark: false,
                           onSelected: (_) =>
@@ -352,7 +346,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 48,
-                      child: ElevatedButton.icon(
+                      child: ElevatedButton(
                         onPressed: _isSavingWin ? null : _handleSaveWin,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
@@ -360,7 +354,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                             vertical: 12,
                           ),
                         ),
-                        icon: _isSavingWin
+                        child: _isSavingWin
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
@@ -369,15 +363,12 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                   color: AppColors.white,
                                 ),
                               )
-                            : const Icon(Icons.auto_awesome_rounded, size: 20),
-                        label: Text(
-                          _isSavingWin
-                              ? 'Generating STAR Bullet...'
-                              : 'Convert to STAR Bullet & Save Win',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
+                            : const Text(
+                                'Save STAR Win',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontWeight: FontWeight.w800),
+                              ),
                       ),
                     ),
                   ],
@@ -391,7 +382,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Saved STAR Wins',
+                      'Saved Wins',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -415,7 +406,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                       },
                       child: Text(
                         _selectedWinIds.length == wins.length
-                            ? 'Clear Selection'
+                            ? 'Clear'
                             : 'Select All (${wins.length})',
                         style: const TextStyle(
                           fontSize: 12,
@@ -432,39 +423,22 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
               if (wins.isEmpty)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 24,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: const Column(
-                    children: [
-                      Icon(
-                        Icons.emoji_events_rounded,
-                        color: AppColors.textMuted,
-                        size: 32,
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        'No wins logged yet',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.white,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Log an internship project, campaign result, process improvement, or capstone deliverable above to generate your first STAR bullet.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
+                  child: const Text(
+                    'No wins yet. Log your first achievement above.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 )
               else ...[
@@ -543,7 +517,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          '${win.branch.title} · ${win.dateLabel}',
+                                          '${_shortBranchLabel(win.branch)} · ${win.dateLabel}',
                                           style: GoogleFonts.jetBrainsMono(
                                             fontSize: 10.5,
                                             color: AppColors.textMuted,
@@ -594,8 +568,8 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                   children: [
                                     Text(
                                       win.language == 'id'
-                                          ? 'POIN STAR (ANTI-HALUSINASI)'
-                                          : 'STAR CV BULLET (ZERO-HALLUCINATION)',
+                                          ? 'POIN STAR'
+                                          : 'STAR BULLET',
                                       style: GoogleFonts.jetBrainsMono(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w800,
