@@ -46,6 +46,7 @@ const QUANTIFIED_METRIC_PATTERNS = [
 
 const DEFAULT_FALLBACK_MODELS = [
   'gemini-3-flash-preview',
+  'gemini-2.5-flash',
   'gemini-3.5-flash-lite',
   'gemini-3.5-flash',
 ];

@@ -6,21 +6,73 @@ const { formatBilingualError, resolveRequestLanguage, normalizeLanguage } = requ
 const { pool } = require('../config/db');
 
 /**
- * Look up a previous scan with the exact same SHA-256 contentHash for this device
- * so even across server restarts, re-uploading an unchanged CV anchors to the exact
- * same score and structured findings (zero phantom score drops in ATS Score History).
+ * Build a normalized analysis result object from an anchored MySQL scan row.
+ */
+function buildAnchoredResultFromRow(row, payload, { mode, expectedLang, fileName, contentHash }) {
+  const lang = payload.language || expectedLang || 'en';
+  const isId = lang === 'id';
+  const missing = Array.isArray(payload.missingKeywords) ? payload.missingKeywords : [];
+  const matched = Array.isArray(payload.matchedKeywords) ? payload.matchedKeywords : [];
+  const engine = payload.engine || row.engine || 'gemini';
+
+  return {
+    mode: row.mode || mode || 'global',
+    language: lang,
+    overallScore: Number(payload.overallScore ?? row.overall_score),
+    summary: payload.summary || row.summary || '',
+    issues: Array.isArray(payload.issues) ? payload.issues : [],
+    keywordMatch: {
+      jobTitle: payload.jobTitle || 'Professional',
+      matched,
+      missing,
+      missingCount: missing.length,
+    },
+    meta: {
+      fileName,
+      language: lang,
+      analyzedAtLabel:
+        engine === 'gemini'
+          ? (isId ? 'Dianalisis AI Gemini (Bahasa Indonesia)' : 'Analyzed by Gemini AI (English)')
+          : (isId ? 'Evaluasi Bahasa Indonesia' : 'English ATS Evaluation'),
+      engine,
+      contentHash,
+      cachedAnchor: true,
+    },
+  };
+}
+
+/**
+ * Look up previous scans with the exact same SHA-256 contentHash so re-uploading
+ * an unchanged CV file returns a consistent score and feedback across sessions and
+ * server restarts.
+ *
+ * Returns `{ geminiAnchor, ruleAnchor }` separately so a transient `rule-based`
+ * fallback scan can NEVER poison or override an authoritative `gemini` analysis
+ * or block future Gemini retries.
  */
 async function findAnchoredScanInDb({ deviceId, contentHash, mode, expectedLang, fileName }) {
-  if (!deviceId || !contentHash) return null;
+  if (!contentHash) return { geminiAnchor: null, ruleAnchor: null };
   try {
-    const [rows] = await pool.execute(
-      `SELECT overall_score, summary, mode, engine, encrypted_token
-       FROM scans
-       WHERE device_id = ? AND mode = ? AND encrypted_token IS NOT NULL
-       ORDER BY id DESC
-       LIMIT 15`,
-      [deviceId, mode]
-    );
+    const query = deviceId
+      ? `SELECT overall_score, summary, mode, engine, encrypted_token
+         FROM scans
+         WHERE mode = ? AND encrypted_token IS NOT NULL
+         ORDER BY CASE WHEN engine = 'gemini' THEN 0 ELSE 1 END ASC,
+                  CASE WHEN device_id = ? THEN 0 ELSE 1 END ASC,
+                  id DESC
+         LIMIT 100`
+      : `SELECT overall_score, summary, mode, engine, encrypted_token
+         FROM scans
+         WHERE mode = ? AND encrypted_token IS NOT NULL
+         ORDER BY CASE WHEN engine = 'gemini' THEN 0 ELSE 1 END ASC,
+                  id DESC
+         LIMIT 100`;
+    const params = deviceId ? [mode, deviceId] : [mode];
+
+    const [rows] = await pool.execute(query, params);
+
+    let geminiAnchor = null;
+    let ruleAnchor = null;
 
     for (const row of rows) {
       try {
@@ -28,44 +80,36 @@ async function findAnchoredScanInDb({ deviceId, contentHash, mode, expectedLang,
         if (!payload || payload.contentHash !== contentHash) continue;
         if (expectedLang && payload.language && payload.language !== expectedLang) continue;
 
-        const lang = payload.language || expectedLang || 'en';
-        const isId = lang === 'id';
-        const missing = Array.isArray(payload.missingKeywords) ? payload.missingKeywords : [];
-        const matched = Array.isArray(payload.matchedKeywords) ? payload.matchedKeywords : [];
-        const engine = payload.engine || row.engine || 'gemini';
-
-        return {
-          mode: row.mode || mode || 'global',
-          language: lang,
-          overallScore: Number(payload.overallScore ?? row.overall_score),
-          summary: payload.summary || row.summary || '',
-          issues: Array.isArray(payload.issues) ? payload.issues : [],
-          keywordMatch: {
-            jobTitle: payload.jobTitle || 'Professional',
-            matched,
-            missing,
-            missingCount: missing.length,
-          },
-          meta: {
+        const engine = payload.engine || row.engine || 'rule-based';
+        if (engine === 'gemini') {
+          if (!geminiAnchor) {
+            geminiAnchor = buildAnchoredResultFromRow(row, payload, {
+              mode,
+              expectedLang,
+              fileName,
+              contentHash,
+            });
+            // Authoritative Gemini anchor found — no need to inspect older rows
+            break;
+          }
+        } else if (!ruleAnchor) {
+          ruleAnchor = buildAnchoredResultFromRow(row, payload, {
+            mode,
+            expectedLang,
             fileName,
-            language: lang,
-            analyzedAtLabel:
-              engine === 'gemini'
-                ? (isId ? 'Dianalisis AI Gemini (Bahasa Indonesia)' : 'Analyzed by Gemini AI (English)')
-                : (isId ? 'Evaluasi Bahasa Indonesia' : 'English ATS Evaluation'),
-            engine,
             contentHash,
-            cachedAnchor: true,
-          },
-        };
+          });
+        }
       } catch {
         // Ignore undecryptable legacy tokens
       }
     }
+
+    return { geminiAnchor, ruleAnchor };
   } catch (err) {
     console.warn(`[Anchor Lookup Warning] Could not check prior scans in MySQL: ${err.message}`);
   }
-  return null;
+  return { geminiAnchor: null, ruleAnchor: null };
 }
 
 /**
@@ -112,9 +156,10 @@ router.post('/', async (req, res, next) => {
       hasPhoto: Boolean(hasPhoto),
     });
 
-    // Check DB anchor first (protects exact-content consistency even across server restarts),
-    // otherwise run deterministic ATS analysis (in-memory SHA-256 cache -> Gemini temp=0 -> Rule-Based)
-    let fullResult = await findAnchoredScanInDb({
+    // Check DB anchor first (protects exact-content consistency across sessions & server restarts).
+    // Always prioritize an authoritative Gemini anchor so a transient rule-based fallback
+    // can never poison subsequent scans or prevent Gemini from retrying.
+    const { geminiAnchor, ruleAnchor } = await findAnchoredScanInDb({
       deviceId: effectiveDeviceId,
       contentHash,
       mode: normalizedMode,
@@ -122,13 +167,25 @@ router.post('/', async (req, res, next) => {
       fileName: cleanFileName,
     });
 
+    let fullResult = geminiAnchor;
+
     if (!fullResult) {
-      fullResult = await analyzeCv(cleanText, cleanFileName, {
+      const analyzedResult = await analyzeCv(cleanText, cleanFileName, {
         hasPhoto: Boolean(hasPhoto),
         language: explicitLang || undefined,
         mode: normalizedMode,
         region: normalizedRegion,
       });
+
+      const analyzedEngine = analyzedResult.meta ? analyzedResult.meta.engine : 'rule-based';
+      if (analyzedEngine === 'gemini') {
+        fullResult = analyzedResult;
+      } else if (ruleAnchor) {
+        // Gemini unavailable/offline: keep deterministic consistency with prior rule-based anchor
+        fullResult = ruleAnchor;
+      } else {
+        fullResult = analyzedResult;
+      }
     }
 
     const scanToken = generateScanToken();

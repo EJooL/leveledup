@@ -2,6 +2,7 @@ const http = require('http');
 const app = require('../server');
 const { pool } = require('../config/db');
 const { runGuardrailTests } = require('./aiGuardrails.test');
+const { encryptToken, generateScanToken } = require('../services/tokenService');
 const {
   analyzeCv,
   clearAnalysisCache,
@@ -718,6 +719,87 @@ Node.js, Express, MySQL, PostgreSQL, Docker, REST API, Redis, Microservices, Aut
       httpScan1.body.result.meta.contentHash === httpScan3AfterRestart.body.result.meta.contentHash &&
         httpScan3AfterRestart.body.result.meta.cachedAnchor === true,
       'Cold-restart POST /api/analyze anchors via MySQL SHA-256 contentHash with zero score drift'
+    );
+
+    // 11e. Anti-poisoning & cross-device consistency: a newer rule-based fallback scan must NEVER
+    // override an earlier authoritative Gemini scan for the same CV file (even on a new deviceId)
+    clearAnalysisCache();
+    const anchorTestCv = `${STRONG_EN_CV}\nUnique-Anchor-Run: ${Date.now()}`;
+    const anchorHash = computeCvContentHash({ text: anchorTestCv, mode: 'global', hasPhoto: false });
+    const oldDeviceId = `device-gemini-orig-${Date.now()}`;
+    const newDeviceId = `device-gemini-fresh-${Date.now()}`;
+    const geminiScanToken = generateScanToken();
+    const poisonedRuleScanToken = generateScanToken();
+
+    const geminiSeedPayload = {
+      scanToken: geminiScanToken,
+      contentHash: anchorHash,
+      language: 'en',
+      issues: [
+        { id: 'polish_1', category: 'achievements', severity: 'suggestion', title: 'Tighten summary phrasing' },
+        { id: 'polish_2', category: 'keyword_match', severity: 'suggestion', title: 'Add observability tooling' },
+        { id: 'polish_3', category: 'language_quality', severity: 'suggestion', title: 'Standardize bullet tense' },
+      ],
+      missingKeywords: ['Kubernetes', 'GraphQL'],
+      overallScore: 91,
+      summary: 'Strong CV with minor polish opportunities.',
+      jobTitle: 'Backend Engineer',
+      matchedKeywords: ['Node.js', 'MySQL', 'Docker', 'REST API'],
+      fileName: 'Authoritative_CV.pdf',
+      engine: 'gemini',
+    };
+    const poisonedRulePayload = {
+      scanToken: poisonedRuleScanToken,
+      contentHash: anchorHash,
+      language: 'en',
+      issues: [],
+      missingKeywords: [],
+      overallScore: 100,
+      summary: 'Rule-based fallback with zero regex flaws.',
+      jobTitle: 'Backend Engineer',
+      matchedKeywords: ['Node.js', 'MySQL', 'Docker', 'REST API'],
+      fileName: 'Authoritative_CV.pdf',
+      engine: 'rule-based',
+    };
+
+    await pool.execute(
+      `INSERT INTO scans (scan_token, device_id, file_name, num_pages, num_chars, overall_score, summary, mode, engine, is_unlocked, encrypted_token)
+       VALUES (?, ?, ?, 1, ?, 91, ?, 'global', 'gemini', false, ?)`,
+      [geminiScanToken, oldDeviceId, 'Authoritative_CV.pdf', anchorTestCv.length, geminiSeedPayload.summary, encryptToken(geminiSeedPayload)]
+    );
+    await pool.execute(
+      `INSERT INTO scans (scan_token, device_id, file_name, num_pages, num_chars, overall_score, summary, mode, engine, is_unlocked, encrypted_token)
+       VALUES (?, ?, ?, 1, ?, 100, ?, 'global', 'rule-based', false, ?)`,
+      [poisonedRuleScanToken, newDeviceId, 'Authoritative_CV.pdf', anchorTestCv.length, poisonedRulePayload.summary, encryptToken(poisonedRulePayload)]
+    );
+
+    const crossDeviceScan = await makeRequest(
+      port,
+      '/api/analyze',
+      'POST',
+      { 'Content-Type': 'application/json', 'x-device-id': newDeviceId },
+      JSON.stringify({
+        text: anchorTestCv,
+        fileName: 'Authoritative_CV.pdf',
+        deviceId: newDeviceId,
+        hasPhoto: false,
+        mode: 'global',
+      })
+    );
+
+    // Clean up synthetic test seed rows from MySQL
+    await pool.execute(
+      'DELETE FROM scans WHERE scan_token IN (?, ?, ?)',
+      [geminiScanToken, poisonedRuleScanToken, crossDeviceScan.body?.scanToken || '']
+    );
+
+    assert(
+      crossDeviceScan.status === 200 &&
+        crossDeviceScan.body.result.overallScore === 91 &&
+        crossDeviceScan.body.result.issues.length === 3 &&
+        crossDeviceScan.body.result.meta.engine === 'gemini' &&
+        crossDeviceScan.body.result.meta.cachedAnchor === true,
+      `Authoritative Gemini anchor (91/100, 3 issues) overrides newer rule-based fallback across devices (Got ${crossDeviceScan.body.result?.overallScore}, issues=${crossDeviceScan.body.result?.issues?.length}, engine=${crossDeviceScan.body.result?.meta?.engine})`
     );
 
   } finally {
