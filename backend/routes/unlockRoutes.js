@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { decryptToken } = require('../services/tokenService');
 const { formatBilingualError, resolveRequestLanguage } = require('../services/bilingualValidation');
+const { parseJsonSafe } = require('../utils/routeHelpers');
 const { pool } = require('../config/db');
 
 /**
@@ -126,8 +127,8 @@ router.post('/', async (req, res, next) => {
           );
           if (kw && kw.length > 0) {
             jobTitle = kw[0].job_title;
-            matchedKeywords = typeof kw[0].matched_keywords === 'string' ? JSON.parse(kw[0].matched_keywords) : kw[0].matched_keywords;
-            missingKeywords = typeof kw[0].missing_keywords === 'string' ? JSON.parse(kw[0].missing_keywords) : kw[0].missing_keywords;
+            matchedKeywords = parseJsonSafe(kw[0].matched_keywords, []);
+            missingKeywords = parseJsonSafe(kw[0].missing_keywords, []);
           }
         }
       } catch (loadErr) {

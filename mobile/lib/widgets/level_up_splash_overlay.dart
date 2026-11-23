@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_theme.dart';
 import 'leveledup_arrow.dart';
 
 /// Full-screen matte dark "LeveledUp" celebration splash with upward-floating
@@ -200,21 +200,21 @@ class _LevelUpSplashOverlayState extends State<LevelUpSplashOverlay>
                           opacity: titleOpacity,
                           child: Transform.scale(
                             scale: titleScale,
-                            child: const FittedBox(
+                            child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  LeveledUpArrow(width: 28, height: 42),
-                                  SizedBox(width: 12),
+                                  const LeveledUpArrow(width: 28, height: 42),
+                                  const SizedBox(width: 12),
                                   Text.rich(
                                     TextSpan(
-                                      style: TextStyle(
+                                      style: AppTheme.wordmark(
                                         fontSize: 38,
                                         fontWeight: FontWeight.w800,
                                         letterSpacing: -0.9,
                                       ),
-                                      children: [
+                                      children: const [
                                         TextSpan(
                                           text: 'Leveled',
                                           style: TextStyle(
@@ -254,26 +254,37 @@ class _LevelUpSplashOverlayState extends State<LevelUpSplashOverlay>
                                       color: AppColors.borderBright,
                                     ),
                                   ),
-                                  child: Text(
-                                    'LEVEL ${widget.newLevel} UNLOCKED',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.accentGoldBright,
-                                      letterSpacing: 1.0,
+                                  child: Text.rich(
+                                    TextSpan(
+                                      style: AppTheme.label(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.accentGoldBright,
+                                      ),
+                                      children: [
+                                        const TextSpan(text: 'Level '),
+                                        TextSpan(
+                                          text: '${widget.newLevel}',
+                                          style: AppTheme.numeric(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.accentGoldBright,
+                                          ),
+                                        ),
+                                        const TextSpan(text: ' Unlocked'),
+                                      ],
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
                                   widget.phaseLabel,
                                   textAlign: TextAlign.center,
-                                  style: GoogleFonts.jetBrainsMono(
-                                    fontSize: 11,
+                                  style: AppTheme.display(
+                                    fontSize: 18,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.textSecondary,
-                                    letterSpacing: 1.4,
+                                    color: AppColors.textPrimary,
                                   ),
                                 ),
                               ],
@@ -284,13 +295,12 @@ class _LevelUpSplashOverlayState extends State<LevelUpSplashOverlay>
                         Opacity(
                           opacity: (badgeOpacity * 0.7).clamp(0.0, 1.0),
                           child: Text(
-                            'TAP ANYWHERE TO CONTINUE',
+                            'Tap anywhere to continue',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
+                            style: AppTheme.label(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                               color: AppColors.textMuted,
-                              letterSpacing: 0.8,
                             ),
                           ),
                         ),

@@ -18,7 +18,16 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const analysisCache = new Map();
 
 function cloneResult(obj) {
-  return JSON.parse(JSON.stringify(obj));
+  return structuredClone(obj);
+}
+
+function runRuleFallback(cleanText, fileName, { hasPhoto, lang, contentHash }) {
+  const result = analyzeWithRules(cleanText, fileName, { hasPhoto, language: lang });
+  if (result.meta) {
+    result.meta.contentHash = contentHash;
+    result.meta.cachedAnchor = false;
+  }
+  return result;
 }
 
 function getCachedAnalysis(cacheKey, fileName) {
@@ -161,12 +170,7 @@ async function analyzeCv(text, fileName = 'CV.pdf', options = {}) {
   const aiClient = options._aiClient || (isAiAvailable() ? ai : null);
 
   if (!aiClient) {
-    const ruleResult = analyzeWithRules(cleanText, fileName, { hasPhoto, language: lang });
-    if (ruleResult.meta) {
-      ruleResult.meta.contentHash = contentHash;
-      ruleResult.meta.cachedAnchor = false;
-    }
-    return ruleResult;
+    return runRuleFallback(cleanText, fileName, { hasPhoto, lang, contentHash });
   }
 
   try {
@@ -204,12 +208,7 @@ async function analyzeCv(text, fileName = 'CV.pdf', options = {}) {
     console.warn(
       `[AI Analysis Warning] Gemini API call failed: ${err.message}. Falling back to Rule-Based engine.`
     );
-    const fallbackResult = analyzeWithRules(cleanText, fileName, { hasPhoto, language: lang });
-    if (fallbackResult.meta) {
-      fallbackResult.meta.contentHash = contentHash;
-      fallbackResult.meta.cachedAnchor = false;
-    }
-    return fallbackResult;
+    return runRuleFallback(cleanText, fileName, { hasPhoto, lang, contentHash });
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_theme.dart';
 import '../models/career_companion_model.dart';
 import '../providers/career_provider.dart';
 import '../widgets/level_up_splash_overlay.dart';
@@ -100,29 +101,29 @@ class _MainNavScreenState extends State<MainNavScreen>
                 size: 22,
               ),
               const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Milestone Unlocked: ${badge.title}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.white,
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Milestone Unlocked: ${badge.title}',
+                        style: AppTheme.display(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.white,
+                        ),
                       ),
-                    ),
-                    Text(
-                      badge.description,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: AppColors.textSecondary,
+                      Text(
+                        badge.description,
+                        style: AppTheme.body(
+                          fontSize: 11.5,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -252,7 +253,7 @@ class _MainNavScreenState extends State<MainNavScreen>
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: AppTheme.label(
                                 fontSize: 11.5,
                                 fontWeight:
                                     isSelected ? FontWeight.w700 : FontWeight.w500,

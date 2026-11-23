@@ -34,17 +34,12 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
     return UserCareerProfile(
       characterName: 'Ijul',
       targetRole: 'Fresh Graduate Professional',
-      level: 1,
-      currentXp: 180,
       preJobLevel: 1,
       preJobXp: 180,
       postHireLevel: 1,
       postHireXp: 150,
       totalXpEarned: 330,
-      streakDays: 5,
       latestAtsScore: null,
-      applicationsSent: 3,
-      interviewsSecured: 1,
       currentStage: CareerStage.jobHunting,
       quests: [
         // Job Hunt Mode: Scan-Verified Quests
@@ -186,8 +181,7 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
           verificationType: QuestVerificationType.selfReported,
         ),
       ],
-      skills: const [],
-      badges: [
+      badges: const [
         CareerBadge(
           id: 'b_ats_scanned',
           title: 'ATS Baseline Set',
@@ -232,29 +226,16 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
         ),
       ],
       workWins: const [],
-      checkIns: [
-        DailyCheckIn(
-          id: 'ci_seed_1',
-          focusArea: 'Deep Work & Shipping',
-          confidenceRating: 4,
-          note: 'Wrapped up API validation and reviewed mobile state flow.',
-          dateKey: '2026-11-19',
-          dateLabel: 'Yesterday',
-        ),
-      ],
       scoreHistory: const [],
       skillGap: defaultGap,
-      needsQuarterlyReminder: true,
     );
   }
 
   /// Synchronize score history, scan-verified quests, wins, and skill gap from MySQL
-  Future<void> syncFromBackend({bool simulateReminder = false}) async {
+  Future<void> syncFromBackend() async {
     try {
       final progressData = await _apiClient.fetchProgress();
-      final winsData = await _apiClient.fetchWins(
-        simulateReminder: simulateReminder,
-      );
+      final winsData = await _apiClient.fetchWins();
 
       if (progressData != null) {
         final rawHistory =
@@ -299,14 +280,8 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
         final parsedWins = rawWins
             .map((e) => WorkWin.fromJson(e as Map<String, dynamic>))
             .toList();
-        final needsReminder = winsData['needsQuarterlyReminder'] == true;
-        final msg = winsData['reminderMessageEn']?.toString();
 
-        state = state.copyWith(
-          workWins: parsedWins,
-          needsQuarterlyReminder: needsReminder,
-          reminderMessage: msg,
-        );
+        state = state.copyWith(workWins: parsedWins);
       }
     } catch (_) {
       // Offline mode continues using local state
@@ -325,10 +300,6 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
     if (state.pendingLevelUpEvent != null) {
       state = state.copyWith(clearLevelUpEvent: true);
     }
-  }
-
-  void dismissQuarterlyReminder() {
-    state = state.copyWith(needsQuarterlyReminder: false);
   }
 
   /// Switch between Job Hunt mode and Hired (First 90 Days) mode
@@ -738,7 +709,6 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
       updatedWorkWins: [createdWin, ...state.workWins],
       updatedQuests: updatedQuests,
       updatedBadges: updatedBadges,
-      needsQuarterlyReminder: false,
       pendingToastBadge: toastBadge,
     );
 
@@ -798,41 +768,6 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
     return mergedCv;
   }
 
-  /// Submit or update today's Daily Career Check-In (kept behind enableDailyCheckIn feature flag)
-  bool submitDailyCheckIn({
-    required String focusArea,
-    required int confidenceRating,
-    required String note,
-  }) {
-    final todayKey = UserCareerProfile.todayDateKey();
-    final alreadyDoneToday = state.hasCheckedInToday;
-
-    final entry = DailyCheckIn(
-      id: 'ci_${DateTime.now().millisecondsSinceEpoch}',
-      focusArea: focusArea,
-      confidenceRating: confidenceRating.clamp(1, 5),
-      note: note.trim(),
-      dateKey: todayKey,
-      dateLabel: 'Today',
-    );
-
-    final remaining =
-        state.checkIns.where((c) => c.dateKey != todayKey).toList();
-    final updatedCheckIns = [entry, ...remaining];
-
-    if (alreadyDoneToday) {
-      state = state.copyWith(checkIns: updatedCheckIns);
-      return false;
-    }
-
-    _addXpInternal(
-      35,
-      updatedStreak: state.streakDays + 1,
-      updatedCheckIns: updatedCheckIns,
-    );
-    return true;
-  }
-
   /// Toggles a quest if and only if it is self-reported.
   /// Returns an explanation message if the quest is scan_verified or win_verified.
   Future<String?> toggleQuestCompletion(String questId) async {
@@ -867,7 +802,6 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
     required String description,
     required CareerStage stage,
     required QuestDifficulty difficulty,
-    required String impactTag,
   }) {
     final newQuest = CareerQuest(
       id: 'q_custom_${DateTime.now().millisecondsSinceEpoch}',
@@ -886,42 +820,6 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
     state = state.copyWith(quests: [...state.quests, newQuest]);
   }
 
-  /// Legacy compatibility helper for cv_provider / tests
-  void recordAtsMilestone({
-    int? atsScore,
-    String? questIdToComplete,
-    String? badgeIdToUnlock,
-    int bonusXp = 50,
-  }) {
-    var updatedQuests = List<CareerQuest>.from(state.quests);
-    if (questIdToComplete != null) {
-      final qIdx = updatedQuests.indexWhere((q) => q.id == questIdToComplete);
-      if (qIdx != -1 && !updatedQuests[qIdx].isCompleted) {
-        updatedQuests[qIdx] = updatedQuests[qIdx].copyWith(isCompleted: true);
-      }
-    }
-
-    var updatedBadges = List<CareerBadge>.from(state.badges);
-    CareerBadge? toast;
-    if (badgeIdToUnlock != null) {
-      final already =
-          updatedBadges.any((b) => b.id == badgeIdToUnlock && b.isEarned);
-      updatedBadges = _unlockBadgeList(updatedBadges, badgeIdToUnlock);
-      if (!already) {
-        final matched = updatedBadges.where((b) => b.id == badgeIdToUnlock);
-        if (matched.isNotEmpty) toast = matched.first;
-      }
-    }
-
-    _addXpInternal(
-      bonusXp,
-      updatedQuests: updatedQuests,
-      updatedBadges: updatedBadges,
-      latestAtsScore: atsScore ?? state.latestAtsScore,
-      pendingToastBadge: toast,
-    );
-  }
-
   List<CareerBadge> _unlockBadgeList(List<CareerBadge> list, String badgeId) {
     return list
         .map((b) => b.id == badgeId ? b.copyWith(isEarned: true) : b)
@@ -933,13 +831,10 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
     List<CareerQuest>? updatedQuests,
     List<CareerBadge>? updatedBadges,
     int? latestAtsScore,
-    int? updatedStreak,
     List<WorkWin>? updatedWorkWins,
-    List<DailyCheckIn>? updatedCheckIns,
     List<ScanScorePoint>? updatedScoreHistory,
     SkillGapReport? updatedSkillGap,
     String? updatedTargetRole,
-    bool? needsQuarterlyReminder,
     ImprovedCV? latestMergedCv,
     CareerBadge? pendingToastBadge,
   }) {
@@ -989,16 +884,12 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
       postHireLevel: postLevel,
       postHireXp: postXp,
       totalXpEarned: totalXp,
-      streakDays: updatedStreak ?? state.streakDays,
       quests: updatedQuests ?? state.quests,
       badges: updatedBadges ?? state.badges,
       latestAtsScore: latestAtsScore ?? state.latestAtsScore,
       workWins: updatedWorkWins ?? state.workWins,
-      checkIns: updatedCheckIns ?? state.checkIns,
       scoreHistory: updatedScoreHistory ?? state.scoreHistory,
       skillGap: updatedSkillGap ?? state.skillGap,
-      needsQuarterlyReminder:
-          needsQuarterlyReminder ?? state.needsQuarterlyReminder,
       latestMergedCv: latestMergedCv ?? state.latestMergedCv,
       pendingToastBadge: pendingToastBadge,
       pendingLevelUpEvent: levelUpEvent,

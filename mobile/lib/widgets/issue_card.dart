@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_theme.dart';
 import '../models/cv_analysis_model.dart';
 
 class IssueCard extends StatelessWidget {
@@ -21,6 +22,11 @@ class IssueCard extends StatelessWidget {
       default:
         return AppColors.accentCyan;
     }
+  }
+
+  String _formatSeverityLabel() {
+    if (issue.severity.isEmpty) return '';
+    return '${issue.severity[0].toUpperCase()}${issue.severity.substring(1)}';
   }
 
   @override
@@ -54,32 +60,36 @@ class IssueCard extends StatelessWidget {
                   border: Border.all(color: sevColor.withValues(alpha: 0.5)),
                 ),
                 child: Text(
-                  issue.severity.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
+                  _formatSeverityLabel(),
+                  style: AppTheme.label(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                     color: sevColor,
-                    letterSpacing: 0.6,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  issue.categoryLabel,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    issue.categoryLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTheme.label(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ),
               const Spacer(),
+              const SizedBox(width: 8),
               Icon(
                 issue.isLocked ? Icons.lock_outline_rounded : Icons.lock_open_rounded,
                 size: 16,
@@ -92,11 +102,11 @@ class IssueCard extends StatelessWidget {
           // Issue Title (Always visible)
           Text(
             issue.title,
-            style: const TextStyle(
-              fontSize: 15,
+            style: AppTheme.display(
+              fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppColors.white,
-              height: 1.35,
+              height: 1.32,
             ),
           ),
           const SizedBox(height: 12),
@@ -121,21 +131,22 @@ class IssueCard extends StatelessWidget {
                       color: AppColors.accentGold,
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Deep root cause, fix & Before/After rewrite locked',
-                        style: TextStyle(
+                        style: AppTheme.body(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       'Unlock +120 XP',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
+                      style: AppTheme.numeric(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.accentGoldBright,
                       ),
                     ),
@@ -148,7 +159,7 @@ class IssueCard extends StatelessWidget {
             if (issue.detail != null) ...[
               Text(
                 issue.detail!,
-                style: const TextStyle(
+                style: AppTheme.body(
                   fontSize: 13,
                   color: AppColors.textSecondary,
                   height: 1.45,
@@ -178,7 +189,7 @@ class IssueCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'Fix: ${issue.fix!}',
-                        style: const TextStyle(
+                        style: AppTheme.body(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
                           color: AppColors.white,
@@ -203,44 +214,43 @@ class IssueCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'BEFORE (ATS REJECTION RISK)',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
+                    Text(
+                      'Before (ATS Rejection Risk)',
+                      style: AppTheme.label(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.crimson,
-                        letterSpacing: 0.6,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       issue.rewrite!.before,
-                      style: const TextStyle(
+                      style: AppTheme.body(
                         fontSize: 12.5,
                         color: AppColors.textMuted,
-                        decoration: TextDecoration.lineThrough,
-                      ),
+                        height: 1.45,
+                      ).copyWith(decoration: TextDecoration.lineThrough),
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Divider(height: 1),
                     ),
-                    const Text(
-                      'AFTER (GLOBAL ATS STANDARD)',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
+                    Text(
+                      'After (Global ATS Standard)',
+                      style: AppTheme.label(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.emerald,
-                        letterSpacing: 0.6,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       issue.rewrite!.after,
-                      style: const TextStyle(
+                      style: AppTheme.body(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
                         color: AppColors.white,
+                        height: 1.45,
                       ),
                     ),
                   ],

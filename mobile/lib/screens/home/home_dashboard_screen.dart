@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/career_icons.dart';
 import '../../models/career_companion_model.dart';
 import '../../providers/career_provider.dart';
-import '../../widgets/career_companion_sheets.dart';
 import '../../widgets/career_icon_badge.dart';
 
 class HomeDashboardScreen extends ConsumerWidget {
@@ -33,25 +31,28 @@ class HomeDashboardScreen extends ConsumerWidget {
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.work_outline_rounded, color: AppColors.terracottaBright),
-              SizedBox(width: 12),
+              const Icon(
+                Icons.work_outline_rounded,
+                color: AppColors.terracottaBright,
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Congratulations on the Job!',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
+                  style: AppTheme.display(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.white,
                   ),
                 ),
               ),
             ],
           ),
-          content: const Text(
+          content: Text(
             'Switching to Hired Mode activates your First 90 Days onboarding checklist (30/60/90 manager alignment, documenting your first deliverable, and logging work wins into your living CV).',
-            style: TextStyle(
+            style: AppTheme.body(
               fontSize: 13,
               color: AppColors.textSecondary,
               height: 1.45,
@@ -60,9 +61,12 @@ class HomeDashboardScreen extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
+              child: Text(
                 'Not yet',
-                style: TextStyle(color: AppColors.textMuted),
+                style: AppTheme.label(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                ),
               ),
             ),
             ElevatedButton(
@@ -100,11 +104,10 @@ class HomeDashboardScreen extends ConsumerWidget {
                       'Hello, ${profile.characterName}!',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: AppTheme.display(
                         fontSize: 24,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                         color: AppColors.white,
-                        letterSpacing: -0.5,
                       ),
                     ),
                   ),
@@ -128,9 +131,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                           '${profile.activeModeProgressLabel} · ${profile.totalXpEarned} XP',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                          style: AppTheme.numeric(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.terracottaBright,
                           ),
                         ),
@@ -188,13 +191,14 @@ class HomeDashboardScreen extends ConsumerWidget {
                                       borderRadius: BorderRadius.circular(999),
                                     ),
                                     child: Text(
-                                      profile.currentStage.label.toUpperCase(),
+                                      profile.currentStage.label,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.jetBrainsMono(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
+                                      style: AppTheme.label(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
                                         color: AppColors.white,
+                                        letterSpacing: 0.1,
                                       ),
                                     ),
                                   ),
@@ -202,9 +206,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                                 const SizedBox(width: 8),
                                 Text(
                                   profile.activeModeProgressLabel,
-                                  style: GoogleFonts.jetBrainsMono(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w800,
+                                  style: AppTheme.numeric(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
                                     color: AppColors.white,
                                   ),
                                 ),
@@ -215,23 +219,22 @@ class HomeDashboardScreen extends ConsumerWidget {
                               Text.rich(
                                 TextSpan(
                                   children: [
-                                    const TextSpan(
+                                    TextSpan(
                                       text: 'ATS Score: ',
-                                      style: TextStyle(
+                                      style: AppTheme.display(
                                         fontSize: 24,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w700,
                                         color: AppColors.white,
-                                        letterSpacing: -0.5,
                                         height: 1.1,
                                       ),
                                     ),
                                     TextSpan(
                                       text: '${profile.latestAtsScore}/100',
-                                      style: GoogleFonts.jetBrainsMono(
+                                      style: AppTheme.numeric(
                                         fontSize: 26,
                                         fontWeight: FontWeight.w800,
                                         color: AppColors.white,
-                                        letterSpacing: -0.8,
+                                        letterSpacing: -0.5,
                                         height: 1.1,
                                       ),
                                     ),
@@ -241,15 +244,14 @@ class HomeDashboardScreen extends ConsumerWidget {
                                 overflow: TextOverflow.ellipsis,
                               )
                             else
-                              const Text(
+                              Text(
                                 'No ATS Scan Yet',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                                style: AppTheme.display(
                                   fontSize: 26,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w800,
                                   color: AppColors.white,
-                                  letterSpacing: -0.6,
                                   height: 1.1,
                                 ),
                               ),
@@ -258,9 +260,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                               'Next: ${profile.nextBestActionTitle}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
+                              style: AppTheme.body(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
                                 color: AppColors.white.withValues(alpha: 0.92),
                               ),
                             ),
@@ -270,23 +272,23 @@ class HomeDashboardScreen extends ConsumerWidget {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'LV ${profile.currentLevel} · ${profile.phaseShortTag}',
+                                    'Lv ${profile.currentLevel} · ${profile.isHiredMode ? 'Post-Hire' : 'Pre-Job'}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
+                                    style: AppTheme.numeric(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
                                       color: AppColors.white,
-                                      letterSpacing: 0.4,
+                                      letterSpacing: 0.1,
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${profile.currentPhaseXp} / ${profile.targetPhaseXp} XP',
-                                  style: GoogleFonts.jetBrainsMono(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
+                                  style: AppTheme.numeric(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
                                     color:
                                         AppColors.white.withValues(alpha: 0.92),
                                   ),
@@ -352,27 +354,18 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: ApiConstants.enableDailyCheckIn
-                        ? _QuickActionSquircle(
-                            icon: Icons.event_available_outlined,
-                            label: 'Check-In',
-                            dotColor: profile.hasCheckedInToday
-                                ? AppColors.emerald
-                                : AppColors.terracotta,
-                            onTap: () => showDailyCheckInSheet(context, ref),
-                          )
-                        : _QuickActionSquircle(
-                            icon: profile.isHiredMode
-                                ? Icons.verified_outlined
-                                : Icons.work_outline_rounded,
-                            label: profile.isHiredMode
-                                ? '90-Day Plan'
-                                : 'Got the Job',
-                            iconColor: profile.isHiredMode
-                                ? AppColors.emerald
-                                : AppColors.white,
-                            onTap: () => _confirmGotTheJobDialog(context, ref),
-                          ),
+                    child: _QuickActionSquircle(
+                      icon: profile.isHiredMode
+                          ? Icons.verified_outlined
+                          : Icons.work_outline_rounded,
+                      label: profile.isHiredMode
+                          ? '90-Day Plan'
+                          : 'Got the Job',
+                      iconColor: profile.isHiredMode
+                          ? AppColors.emerald
+                          : AppColors.white,
+                      onTap: () => _confirmGotTheJobDialog(context, ref),
+                    ),
                   ),
                 ],
               ),
@@ -401,11 +394,11 @@ class HomeDashboardScreen extends ConsumerWidget {
                           size: 20,
                         ),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'Score Timeline:',
-                          style: TextStyle(
+                          style: AppTheme.label(
                             fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.textSecondary,
                           ),
                         ),
@@ -415,9 +408,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                             profile.timelineLabel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.jetBrainsMono(
+                            style: AppTheme.numeric(
                               fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.white,
                             ),
                           ),
@@ -446,9 +439,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                           : 'Job-Hunt Checklist (${profile.activeModeProgressLabel})',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w800,
+                      style: AppTheme.display(
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.white,
                       ),
                     ),
@@ -456,19 +449,19 @@ class HomeDashboardScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => onNavigateTab(3),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           'See all',
-                          style: TextStyle(
+                          style: AppTheme.label(
                             fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.terracottaBright,
                           ),
                         ),
-                        SizedBox(width: 4),
-                        Icon(
+                        const SizedBox(width: 4),
+                        const Icon(
                           Icons.arrow_forward_rounded,
                           size: 16,
                           color: AppColors.terracottaBright,
@@ -527,7 +520,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                                         Expanded(
                                           child: Text(
                                             msg,
-                                            style: const TextStyle(
+                                            style: AppTheme.body(
                                               color: AppColors.white,
                                               fontSize: 12.5,
                                             ),
@@ -555,7 +548,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                                             isWin
                                                 ? 'Open Wins'
                                                 : 'Open Scanner',
-                                            style: const TextStyle(
+                                            style: AppTheme.label(
                                               fontWeight: FontWeight.w700,
                                               fontSize: 12.5,
                                             ),
@@ -585,14 +578,12 @@ class _QuickActionSquircle extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final Color iconColor;
-  final Color? dotColor;
 
   const _QuickActionSquircle({
     required this.icon,
     required this.label,
     required this.onTap,
     this.iconColor = AppColors.white,
-    this.dotColor,
   });
 
   @override
@@ -601,41 +592,19 @@ class _QuickActionSquircle extends StatelessWidget {
       onTap: onTap,
       child: Column(
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceElevated,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 22,
-                ),
-              ),
-              if (dotColor != null)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: dotColor,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.background,
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceElevated,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 22,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -643,7 +612,7 @@ class _QuickActionSquircle extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: AppTheme.label(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
@@ -691,12 +660,13 @@ class _ChecklistQuestRow extends StatelessWidget {
                     quest.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: AppTheme.body(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: quest.isCompleted
                           ? AppColors.textSecondary
                           : AppColors.white,
+                    ).copyWith(
                       decoration: quest.isCompleted
                           ? TextDecoration.lineThrough
                           : null,
@@ -707,8 +677,8 @@ class _ChecklistQuestRow extends StatelessWidget {
                     quest.verificationType.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 11,
+                    style: AppTheme.label(
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                       color: isVerified
                           ? AppColors.terracottaBright

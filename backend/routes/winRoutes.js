@@ -3,24 +3,7 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { generateStarBullet, mergeWinsIntoCvObject } = require('../services/aiWinService');
 const { formatBilingualError, resolveRequestLanguage } = require('../services/bilingualValidation');
-
-function resolveDeviceId(req) {
-  const fromHeader = req.headers['x-device-id'];
-  const fromBody = req.body && req.body.deviceId;
-  const fromQuery = req.query && req.query.deviceId;
-  const raw = fromHeader || fromBody || fromQuery || 'default-device';
-  return String(raw).trim().slice(0, 128) || 'default-device';
-}
-
-function parseJsonSafe(val, fallback) {
-  if (!val) return fallback;
-  if (typeof val === 'object') return val;
-  try {
-    return JSON.parse(val);
-  } catch {
-    return fallback;
-  }
-}
+const { resolveDeviceId, parseJsonSafe } = require('../utils/routeHelpers');
 
 /**
  * GET /api/wins

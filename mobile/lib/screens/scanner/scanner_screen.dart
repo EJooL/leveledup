@@ -2,10 +2,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/docx_generator.dart';
+import '../../models/cv_analysis_model.dart';
 import '../../providers/cv_provider.dart';
 import '../../widgets/issue_card.dart';
 import '../../widgets/leveledup_arrow.dart';
@@ -165,16 +166,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.vpn_key_rounded, color: AppColors.terracottaBright),
-              SizedBox(width: 12),
+              const Icon(Icons.vpn_key_rounded, color: AppColors.terracottaBright),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Unlock Full ATS Solutions',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
+                  style: AppTheme.display(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.white,
                   ),
                 ),
@@ -185,9 +186,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Enter your VIP access code to reveal deep fixes, Before/After examples, missing keywords, and AI Resume Rewrite (+120 XP).',
-                style: TextStyle(
+                style: AppTheme.body(
                   fontSize: 13,
                   color: AppColors.textSecondary,
                   height: 1.4,
@@ -196,10 +197,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
               const SizedBox(height: 16),
               TextField(
                 controller: controller,
-                style: GoogleFonts.jetBrainsMono(
+                style: AppTheme.numeric(
                   color: AppColors.white,
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
+                  letterSpacing: 0.4,
                 ),
                 decoration: const InputDecoration(
                   labelText: 'Access Code',
@@ -211,9 +213,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: AppColors.textMuted),
+                style: AppTheme.label(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             ElevatedButton(
@@ -331,17 +336,18 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Text(
-            'GLOBAL ATS ENGINE · 5 PILLARS',
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: 10,
+            'Global ATS Engine · 5 Pillars',
+            style: AppTheme.label(
+              fontSize: 11,
               color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.1,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Zero-Hallucination AI Rewrite',
-            style: TextStyle(
+            style: AppTheme.body(
               fontSize: 11.5,
               color: AppColors.textMuted,
             ),
@@ -384,37 +390,39 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'ATS SCORE',
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.white.withValues(alpha: 0.8),
+                    'ATS Score',
+                    style: AppTheme.label(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.white.withValues(alpha: 0.85),
+                      letterSpacing: 0.1,
                     ),
                   ),
                   Text(
                     '92 / 100',
-                    style: GoogleFonts.jetBrainsMono(
+                    style: AppTheme.numeric(
                       fontSize: 28,
                       fontWeight: FontWeight.w800,
                       color: AppColors.white,
-                      letterSpacing: -0.8,
+                      letterSpacing: -0.6,
                     ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'TAP TO UPLOAD PDF (MAX 4MB)',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.white.withValues(alpha: 0.9),
+                        'Tap to upload PDF (max 4 MB)',
+                        style: AppTheme.label(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.white.withValues(alpha: 0.92),
+                          letterSpacing: 0.1,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Global Ready · Zero Bias',
-                        style: TextStyle(
+                        style: AppTheme.body(
                           fontSize: 11,
                           color: AppColors.white.withValues(alpha: 0.8),
                         ),
@@ -434,19 +442,19 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       child: Column(
         children: [
           // 1. Centered Top Brand Mark
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              LeveledUpArrow(width: 16, height: 24),
-              SizedBox(width: 8),
+              const LeveledUpArrow(width: 16, height: 24),
+              const SizedBox(width: 8),
               Text.rich(
                 TextSpan(
-                  style: TextStyle(
+                  style: AppTheme.wordmark(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
                   ),
-                  children: [
+                  children: const [
                     TextSpan(
                       text: 'Leveled',
                       style: TextStyle(color: AppColors.white),
@@ -600,15 +608,14 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             },
             child: Column(
               children: [
-                const Text.rich(
+                Text.rich(
                   TextSpan(
-                    style: TextStyle(
-                      fontSize: 27,
+                    style: AppTheme.display(
+                      fontSize: 28,
                       fontWeight: FontWeight.w700,
-                      height: 1.22,
-                      letterSpacing: -0.3,
+                      height: 1.18,
                     ),
-                    children: [
+                    children: const [
                       TextSpan(
                         text: 'Pass ATS Before\n',
                         style: TextStyle(color: AppColors.white),
@@ -622,12 +629,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
                     'The best companion to scan your PDF resume, fix fatal ATS flaws, and level up your global career.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: AppTheme.body(
                       fontSize: 13.5,
                       color: AppColors.textSecondary,
                       height: 1.5,
@@ -650,7 +657,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
               child: Text(
                 errorMessage,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.white, fontSize: 12.5),
+                style: AppTheme.body(color: AppColors.white, fontSize: 12.5),
               ),
             ),
           ],
@@ -682,11 +689,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       foregroundColor: AppColors.white,
                       shape: const StadiumBorder(),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Scan CV (PDF) — Free',
-                      style: TextStyle(
+                      style: AppTheme.label(
                         fontSize: 15.5,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
                       ),
                     ),
                   ),
@@ -706,9 +714,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                         size: 16,
                         color: AppColors.terracottaBright,
                       ),
-                      label: const Text(
+                      label: Text(
                         'Demo CV (Indo)',
-                        style: TextStyle(fontSize: 12.5),
+                        style: AppTheme.label(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     OutlinedButton.icon(
@@ -720,9 +731,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                         size: 16,
                         color: AppColors.terracottaBright,
                       ),
-                      label: const Text(
+                      label: Text(
                         'Demo CV (English)',
-                        style: TextStyle(fontSize: 12.5),
+                        style: AppTheme.label(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -743,12 +757,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                         child: Text(
-                          'WHAT THE SCANNER AUDITS · 5 PILLARS',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
+                          'What the scanner audits · 5 pillars',
+                          style: AppTheme.label(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.terracottaBright,
-                            letterSpacing: 0.6,
+                            letterSpacing: 0.1,
                           ),
                         ),
                       ),
@@ -791,13 +805,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'IN-MEMORY PDF PARSE · MAX 4MB · NO FABRICATED METRICS',
+                        'In-memory PDF parse · Max 4 MB · No fabricated metrics',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                        style: AppTheme.label(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
                           color: AppColors.textDim,
-                          letterSpacing: 0.3,
+                          letterSpacing: 0.1,
                         ),
                       ),
                     ),
@@ -836,17 +850,17 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             Text(
               stepTitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
+              style: AppTheme.display(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
                 color: AppColors.white,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Checking EEOC compliance, STAR action verbs, and role keywords...',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: AppTheme.body(
                 fontSize: 13,
                 color: AppColors.textSecondary,
               ),
@@ -901,8 +915,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                                   : 'English CV Evaluation',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 11,
+                              style: AppTheme.label(
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.white,
                               ),
@@ -918,19 +932,19 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       ref.read(cvScanProvider.notifier).resetScanner();
                       _entranceController?.forward(from: 0.0);
                     },
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           'New Scan',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                          style: AppTheme.label(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.terracottaBright,
                           ),
                         ),
-                        SizedBox(width: 4),
-                        Icon(
+                        const SizedBox(width: 4),
+                        const Icon(
                           Icons.refresh_rounded,
                           size: 16,
                           color: AppColors.terracottaBright,
@@ -941,31 +955,31 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                 ],
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Overall ATS Readiness',
-                style: TextStyle(
+                style: AppTheme.label(
                   fontSize: 12.5,
                   color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 '${result.overallScore} / 100',
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 36,
+                style: AppTheme.numeric(
+                  fontSize: 38,
                   fontWeight: FontWeight.w800,
                   color: AppColors.white,
-                  letterSpacing: -1.0,
+                  letterSpacing: -0.8,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 '${AppColors.getScoreLabel(result.overallScore)} · ${result.issues.length} flaws detected',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                style: AppTheme.numeric(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
                   color: AppColors.getScoreColor(result.overallScore),
                 ),
               ),
@@ -1004,23 +1018,23 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                           color: AppColors.terracotta,
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.lock_open_rounded,
                               color: AppColors.white,
                               size: 20,
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Flexible(
                               child: Text(
                                 'Unlock Full Fixes & AI Rewrite (VIP Code)',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
+                                style: AppTheme.label(
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                   color: AppColors.white,
                                 ),
                               ),
@@ -1033,11 +1047,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   ],
 
                   // 2-Column Borderless Tonal Overview Tiles (Zero nested borders)
-                  const Text(
+                  Text(
                     'Overview',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                    style: AppTheme.display(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.white,
                     ),
                   ),
@@ -1077,12 +1091,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                                         ),
                                       ),
                                       const SizedBox(height: 16),
-                                      const Text(
+                                      Text(
                                         'Matched Skills',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
+                                        style: AppTheme.label(
                                           fontSize: 12,
+                                          fontWeight: FontWeight.w600,
                                           color: AppColors.textSecondary,
                                         ),
                                       ),
@@ -1091,9 +1106,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                                         '$matchedCount Keywords',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.jetBrainsMono(
+                                        style: AppTheme.numeric(
                                           fontSize: 16,
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w700,
                                           color: AppColors.white,
                                         ),
                                       ),
@@ -1132,12 +1147,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                                         ),
                                       ),
                                       const SizedBox(height: 16),
-                                      const Text(
+                                      Text(
                                         'ATS Flaws',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
+                                        style: AppTheme.label(
                                           fontSize: 12,
+                                          fontWeight: FontWeight.w600,
                                           color: AppColors.textSecondary,
                                         ),
                                       ),
@@ -1146,9 +1162,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                                         '${result.issues.length} Issues',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.jetBrainsMono(
+                                        style: AppTheme.numeric(
                                           fontSize: 16,
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w700,
                                           color: AppColors.white,
                                         ),
                                       ),
@@ -1167,11 +1183,11 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   const SizedBox(height: 24),
 
                   // Diagnostic Issues List
-                  const Text(
+                  Text(
                     'Diagnostic Flaws',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                    style: AppTheme.display(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.white,
                     ),
                   ),
@@ -1195,6 +1211,17 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
     );
   }
 
+  Future<void> _downloadWordCv(ImprovedCV cv) async {
+    final savedPath = await DocxCvGenerator.exportAndDownloadDocx(cv);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Word CV (.docx) saved locally to $savedPath!'),
+        backgroundColor: AppColors.emerald,
+      ),
+    );
+  }
+
   Widget _buildRewriteSection(CvScanState scanState) {
     final cv = scanState.rewrittenCv;
     final isUnlocked = scanState.analysisResult?.isUnlocked ?? false;
@@ -1204,27 +1231,30 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
       children: [
         const Divider(color: AppColors.border, height: 1),
         const SizedBox(height: 24),
-        const Row(
+        Row(
           children: [
-            Icon(Icons.auto_awesome_rounded, color: AppColors.terracottaBright),
-            SizedBox(width: 8),
+            const Icon(
+              Icons.auto_awesome_rounded,
+              color: AppColors.terracottaBright,
+            ),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'AI Zero-Hallucination Resume Rewrite',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                    style: AppTheme.display(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.white,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     'Single-column STAR format with [placeholder] tags (+150 XP)',
-                    style: TextStyle(
-                      fontSize: 11.5,
+                    style: AppTheme.body(
+                      fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -1268,16 +1298,16 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
               children: [
                 Text(
                   cv.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
+                  style: AppTheme.display(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.white,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   cv.title,
-                  style: const TextStyle(
+                  style: AppTheme.body(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: AppColors.terracottaBright,
@@ -1287,20 +1317,20 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                   const SizedBox(height: 4),
                   Text(
                     cv.contact.join('  |  '),
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 10.5,
+                    style: AppTheme.body(
+                      fontSize: 11.5,
                       color: AppColors.textMuted,
                     ),
                   ),
                 ],
                 const Divider(color: AppColors.border, height: 20),
                 Text(
-                  cv.isIndonesian ? 'RINGKASAN' : 'SUMMARY',
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 11,
+                  cv.isIndonesian ? 'Ringkasan' : 'Summary',
+                  style: AppTheme.label(
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textSecondary,
-                    letterSpacing: 0.8,
+                    letterSpacing: 0.15,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1313,12 +1343,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          sec.heading.toUpperCase(),
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 11,
+                          sec.heading,
+                          style: AppTheme.label(
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppColors.textSecondary,
-                            letterSpacing: 0.8,
+                            letterSpacing: 0.15,
                           ),
                         ),
                         const Divider(color: AppColors.border, height: 10),
@@ -1336,8 +1366,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                                       Expanded(
                                         child: Text(
                                           entry.title,
-                                          style: const TextStyle(
-                                            fontSize: 12.5,
+                                          style: AppTheme.body(
+                                            fontSize: 13,
                                             fontWeight: FontWeight.w700,
                                             color: AppColors.white,
                                           ),
@@ -1347,8 +1377,9 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                                         const SizedBox(width: 8),
                                         Text(
                                           entry.date,
-                                          style: GoogleFonts.jetBrainsMono(
-                                            fontSize: 10.5,
+                                          style: AppTheme.numeric(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500,
                                             color: AppColors.textMuted,
                                           ),
                                         ),
@@ -1359,8 +1390,8 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                                     const SizedBox(height: 2),
                                     Text(
                                       entry.subtitle,
-                                      style: const TextStyle(
-                                        fontSize: 11.5,
+                                      style: AppTheme.body(
+                                        fontSize: 12,
                                         color: AppColors.textSecondary,
                                       ),
                                     ),
@@ -1383,7 +1414,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                               padding: const EdgeInsets.only(bottom: 6),
                               child: Text.rich(
                                 TextSpan(
-                                  style: const TextStyle(
+                                  style: AppTheme.body(
                                     fontSize: 12.5,
                                     color: AppColors.white,
                                     height: 1.4,
@@ -1422,35 +1453,13 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
             children: [
               if (isUnlocked)
                 ElevatedButton.icon(
-                  onPressed: () async {
-                    final savedPath =
-                        await DocxCvGenerator.exportAndDownloadDocx(cv);
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content:
-                            Text('Word CV (.docx) saved locally to $savedPath!'),
-                        backgroundColor: AppColors.emerald,
-                      ),
-                    );
-                  },
+                  onPressed: () => _downloadWordCv(cv),
                   icon: const Icon(Icons.download_rounded, size: 16),
                   label: const Text('Download Word CV (.docx)'),
                 )
               else
                 OutlinedButton.icon(
-                  onPressed: () async {
-                    final savedPath =
-                        await DocxCvGenerator.exportAndDownloadDocx(cv);
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content:
-                            Text('Word CV (.docx) saved locally to $savedPath!'),
-                        backgroundColor: AppColors.emerald,
-                      ),
-                    );
-                  },
+                  onPressed: () => _downloadWordCv(cv),
                   icon: const Icon(Icons.download_rounded, size: 16),
                   label: const Text('Download Word CV (.docx)'),
                 ),
@@ -1514,7 +1523,7 @@ class _AuditPillarRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: AppTheme.body(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppColors.white,
@@ -1523,7 +1532,7 @@ class _AuditPillarRow extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: AppTheme.body(
                     fontSize: 12,
                     color: AppColors.textSecondary,
                     height: 1.4,

@@ -1,63 +1,28 @@
 import 'cv_analysis_model.dart';
 
+String _formatIsoDate(String rawDate, String fallback) {
+  if (rawDate.isEmpty) return fallback;
+  final parsed = DateTime.tryParse(rawDate);
+  if (parsed == null) return fallback;
+  final m = parsed.month.toString().padLeft(2, '0');
+  final d = parsed.day.toString().padLeft(2, '0');
+  return '${parsed.year}-$m-$d';
+}
+
 enum CareerStage {
   jobHunting,
   onboarding,
-  midLevel,
-  seniorTrack,
 }
 
 extension CareerStageExtension on CareerStage {
-  /// Only two active modes in UI: Job Hunt and Hired (First 90 Days)
-  static List<CareerStage> get activeModes => const [
-        CareerStage.jobHunting,
-        CareerStage.onboarding,
-      ];
+  String get apiMode => this == CareerStage.jobHunting ? 'job_hunt' : 'hired';
 
-  String get apiMode =>
-      this == CareerStage.jobHunting ? 'job_hunt' : 'hired';
+  static CareerStage fromApiMode(String? mode) =>
+      mode == 'hired' ? CareerStage.onboarding : CareerStage.jobHunting;
 
-  static CareerStage fromApiMode(String? mode) {
-    if (mode == 'hired') return CareerStage.onboarding;
-    return CareerStage.jobHunting;
-  }
-
-  String get label {
-    switch (this) {
-      case CareerStage.jobHunting:
-        return 'Job Hunt Mode';
-      case CareerStage.onboarding:
-        return 'Hired · First 90 Days';
-      case CareerStage.midLevel:
-        return 'Hired · First 90 Days';
-      case CareerStage.seniorTrack:
-        return 'Hired · First 90 Days';
-    }
-  }
-
-  String get shortLabel {
-    switch (this) {
-      case CareerStage.jobHunting:
-        return 'Job Hunt';
-      case CareerStage.onboarding:
-        return 'First 90 Days';
-      case CareerStage.midLevel:
-        return 'First 90 Days';
-      case CareerStage.seniorTrack:
-        return 'First 90 Days';
-    }
-  }
-
-  String get subtitle {
-    switch (this) {
-      case CareerStage.jobHunting:
-        return 'Fix ATS flaws, close skill gaps for your target role, and keep your CV ready.';
-      case CareerStage.onboarding:
-      case CareerStage.midLevel:
-      case CareerStage.seniorTrack:
-        return 'Align 30/60/90-day goals, document deliverables, and merge wins into your living CV.';
-    }
-  }
+  String get label => this == CareerStage.jobHunting
+      ? 'Job Hunt Mode'
+      : 'Hired · First 90 Days';
 }
 
 enum QuestVerificationType {
@@ -96,23 +61,9 @@ enum QuestDifficulty {
   easy,
   medium,
   hard,
-  boss,
 }
 
 extension QuestDifficultyExtension on QuestDifficulty {
-  String get label {
-    switch (this) {
-      case QuestDifficulty.easy:
-        return 'STEP';
-      case QuestDifficulty.medium:
-        return 'CORE';
-      case QuestDifficulty.hard:
-        return 'HIGH IMPACT';
-      case QuestDifficulty.boss:
-        return 'MILESTONE';
-    }
-  }
-
   int get defaultXp {
     switch (this) {
       case QuestDifficulty.easy:
@@ -121,8 +72,6 @@ extension QuestDifficultyExtension on QuestDifficulty {
         return 75;
       case QuestDifficulty.hard:
         return 120;
-      case QuestDifficulty.boss:
-        return 200;
     }
   }
 }
@@ -136,10 +85,10 @@ class CareerQuest {
   final int xpReward;
   final bool isCompleted;
   final String impactMetricTag;
-  final QuestVerificationType? _verificationType;
+  final QuestVerificationType verificationType;
   final String? linkedIssueKey;
 
-  CareerQuest({
+  const CareerQuest({
     required this.id,
     required this.title,
     required this.description,
@@ -148,13 +97,9 @@ class CareerQuest {
     this.xpReward = 50,
     this.isCompleted = false,
     this.impactMetricTag = 'Career Action',
-    QuestVerificationType verificationType = QuestVerificationType.selfReported,
+    this.verificationType = QuestVerificationType.selfReported,
     this.linkedIssueKey,
-  }) : _verificationType = verificationType;
-
-  // Hot-reload safe getter in case existing instances lack the newly added field
-  QuestVerificationType get verificationType =>
-      _verificationType ?? QuestVerificationType.selfReported;
+  });
 
   bool get isManual => verificationType.isManual;
 
@@ -210,19 +155,6 @@ enum SkillBranch {
 }
 
 extension SkillBranchExtension on SkillBranch {
-  String get title {
-    switch (this) {
-      case SkillBranch.technical:
-        return 'Project & Delivery';
-      case SkillBranch.architecture:
-        return 'Process & Quality';
-      case SkillBranch.leadership:
-        return 'Leadership & Teamwork';
-      case SkillBranch.globalOps:
-        return 'Metrics & Growth';
-    }
-  }
-
   String get apiCategory {
     switch (this) {
       case SkillBranch.technical:
@@ -250,44 +182,6 @@ extension SkillBranchExtension on SkillBranch {
   }
 }
 
-class SkillNode {
-  final String id;
-  final String title;
-  final String description;
-  final SkillBranch branch;
-  final int currentTier;
-  final int maxTier;
-  final int xpCost;
-  final int requiredLevel;
-
-  SkillNode({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.branch,
-    this.currentTier = 0,
-    this.maxTier = 3,
-    required this.xpCost,
-    this.requiredLevel = 1,
-  });
-
-  bool get isMaxed => currentTier >= maxTier;
-  bool get isUnlocked => currentTier > 0;
-
-  SkillNode copyWith({int? currentTier}) {
-    return SkillNode(
-      id: id,
-      title: title,
-      description: description,
-      branch: branch,
-      currentTier: currentTier ?? this.currentTier,
-      maxTier: maxTier,
-      xpCost: xpCost,
-      requiredLevel: requiredLevel,
-    );
-  }
-}
-
 class CareerBadge {
   final String id;
   final String title;
@@ -295,7 +189,7 @@ class CareerBadge {
   final String iconCode;
   final bool isEarned;
 
-  CareerBadge({
+  const CareerBadge({
     required this.id,
     required this.title,
     required this.description,
@@ -319,9 +213,9 @@ class WorkWin {
   final String title;
   final String impactMetric;
   final SkillBranch branch;
-  final String? _category;
-  final String? _language;
-  final String? _starBullet;
+  final String category;
+  final String language;
+  final String starBullet;
   final String? mergedIntoScanToken;
   final String dateLabel;
   final CareerStage stage;
@@ -332,27 +226,20 @@ class WorkWin {
     required this.impactMetric,
     required this.branch,
     String? category,
-    String language = 'en',
+    this.language = 'en',
     String? starBullet,
     this.mergedIntoScanToken,
     required this.dateLabel,
     required this.stage,
-  })  : _category = category ?? branch.apiCategory,
-        _language = language,
-        _starBullet = (starBullet != null && starBullet.trim().isNotEmpty)
+  })  : category = category ?? branch.apiCategory,
+        starBullet = (starBullet != null && starBullet.trim().isNotEmpty)
             ? starBullet.trim()
             : _buildDefaultStarBullet(title, impactMetric, language);
 
-  // Hot-reload safe getters
-  String get category => _category ?? branch.apiCategory;
-  String get language => _language ?? 'en';
-  String get starBullet =>
-      (_starBullet != null && _starBullet.trim().isNotEmpty)
-          ? _starBullet
-          : _buildDefaultStarBullet(title, impactMetric, language);
-
   bool get isMerged =>
       mergedIntoScanToken != null && mergedIntoScanToken!.isNotEmpty;
+
+  String toStarBullet() => starBullet;
 
   static String _buildDefaultStarBullet(
     String title,
@@ -382,32 +269,18 @@ class WorkWin {
         : '$cleanTitle, improving overall outcome efficiency by [X]% across [target metric].';
   }
 
-  String toStarBullet() => starBullet;
-
   factory WorkWin.fromJson(Map<String, dynamic> json) {
     final cat = json['category']?.toString() ?? 'project_delivery';
-    final branch = SkillBranchExtension.fromApiCategory(cat);
-    final rawDate = json['createdAt']?.toString() ?? '';
-    String dateLabel = 'Saved Win';
-    if (rawDate.isNotEmpty) {
-      final parsed = DateTime.tryParse(rawDate);
-      if (parsed != null) {
-        final m = parsed.month.toString().padLeft(2, '0');
-        final d = parsed.day.toString().padLeft(2, '0');
-        dateLabel = '${parsed.year}-$m-$d';
-      }
-    }
-
     return WorkWin(
       id: json['id']?.toString() ?? '${DateTime.now().millisecondsSinceEpoch}',
       title: json['title']?.toString() ?? '',
       impactMetric: json['impactMetric']?.toString() ?? '',
-      branch: branch,
+      branch: SkillBranchExtension.fromApiCategory(cat),
       category: cat,
       language: json['language']?.toString() ?? 'en',
       starBullet: json['starBullet']?.toString(),
       mergedIntoScanToken: json['mergedIntoScanToken']?.toString(),
-      dateLabel: dateLabel,
+      dateLabel: _formatIsoDate(json['createdAt']?.toString() ?? '', 'Saved Win'),
       stage: CareerStage.onboarding,
     );
   }
@@ -477,17 +350,6 @@ class ScanScorePoint {
   });
 
   factory ScanScorePoint.fromJson(Map<String, dynamic> json) {
-    final rawDate = json['createdAt']?.toString() ?? '';
-    String label = 'Scan';
-    if (rawDate.isNotEmpty) {
-      final parsed = DateTime.tryParse(rawDate);
-      if (parsed != null) {
-        final m = parsed.month.toString().padLeft(2, '0');
-        final d = parsed.day.toString().padLeft(2, '0');
-        label = '${parsed.year}-$m-$d';
-      }
-    }
-
     return ScanScorePoint(
       scanToken: json['scanToken']?.toString() ?? '',
       fileName: json['fileName']?.toString() ?? 'CV.pdf',
@@ -506,7 +368,7 @@ class ScanScorePoint {
       fixedIssues: (json['fixedIssues'] as List<dynamic>? ?? const [])
           .map((e) => FixedIssueItem.fromJson(e as Map<String, dynamic>))
           .toList(),
-      createdAtLabel: label,
+      createdAtLabel: _formatIsoDate(json['createdAt']?.toString() ?? '', 'Scan'),
     );
   }
 }
@@ -581,24 +443,6 @@ class SkillGapReport {
   }
 }
 
-class DailyCheckIn {
-  final String id;
-  final String focusArea;
-  final int confidenceRating;
-  final String note;
-  final String dateKey;
-  final String dateLabel;
-
-  DailyCheckIn({
-    required this.id,
-    required this.focusArea,
-    required this.confidenceRating,
-    required this.note,
-    required this.dateKey,
-    required this.dateLabel,
-  });
-}
-
 class LevelUpEvent {
   final int newLevel;
   final String careerMode; // 'job_hunt' | 'hired'
@@ -622,81 +466,45 @@ class UserCareerProfile {
 
   final String characterName;
   final String targetRole;
-  final int? _level;
-  final int? _currentXp;
-  final int? _preJobLevel;
-  final int? _preJobXp;
-  final int? _postHireLevel;
-  final int? _postHireXp;
-  final int? _totalXpEarned;
-  final int? _streakDays;
+  final int preJobLevel;
+  final int preJobXp;
+  final int postHireLevel;
+  final int postHireXp;
+  final int totalXpEarned;
   final int? latestAtsScore;
-  final int? _applicationsSent;
-  final int? _interviewsSecured;
   final CareerStage currentStage;
   final List<CareerQuest> quests;
-  final List<SkillNode> skills;
   final List<CareerBadge> badges;
-  final List<WorkWin>? _workWins;
-  final List<DailyCheckIn>? _checkIns;
-  final List<ScanScorePoint>? _scoreHistory;
-  final SkillGapReport? _skillGap;
-  final bool? _needsQuarterlyReminder;
-  final String? _reminderMessage;
+  final List<WorkWin> workWins;
+  final List<ScanScorePoint> scoreHistory;
+  final SkillGapReport skillGap;
   final ImprovedCV? latestMergedCv;
   final CareerBadge? pendingToastBadge;
   final LevelUpEvent? pendingLevelUpEvent;
 
-  UserCareerProfile({
+  const UserCareerProfile({
     required this.characterName,
     required this.targetRole,
-    required int level,
-    required int currentXp,
-    int? preJobLevel,
-    int? preJobXp,
-    int? postHireLevel,
-    int? postHireXp,
-    required int totalXpEarned,
-    required int streakDays,
+    this.preJobLevel = 1,
+    this.preJobXp = 180,
+    this.postHireLevel = 1,
+    this.postHireXp = 150,
+    required this.totalXpEarned,
     this.latestAtsScore,
-    int applicationsSent = 3,
-    int interviewsSecured = 1,
     required this.currentStage,
     required this.quests,
-    required this.skills,
     required this.badges,
-    List<WorkWin> workWins = const [],
-    List<DailyCheckIn> checkIns = const [],
-    List<ScanScorePoint> scoreHistory = const [],
-    SkillGapReport? skillGap,
-    bool needsQuarterlyReminder = true,
-    String? reminderMessage,
+    this.workWins = const [],
+    this.scoreHistory = const [],
+    required this.skillGap,
     this.latestMergedCv,
     this.pendingToastBadge,
     this.pendingLevelUpEvent,
-  })  : _level = level,
-        _currentXp = currentXp,
-        _preJobLevel = preJobLevel ?? level,
-        _preJobXp = preJobXp ?? currentXp,
-        _postHireLevel = postHireLevel ?? 1,
-        _postHireXp = postHireXp ?? 150,
-        _totalXpEarned = totalXpEarned,
-        _streakDays = streakDays,
-        _applicationsSent = applicationsSent,
-        _interviewsSecured = interviewsSecured,
-        _workWins = workWins,
-        _checkIns = checkIns,
-        _scoreHistory = scoreHistory,
-        _skillGap = skillGap,
-        _needsQuarterlyReminder = needsQuarterlyReminder,
-        _reminderMessage = reminderMessage;
+  });
 
-  // Hot-reload safe phase-aware EXP getters
-  String get careerMode => isHiredMode ? 'hired' : 'job_hunt';
-  int get preJobLevel => _preJobLevel ?? (_level ?? 1);
-  int get preJobXp => _preJobXp ?? (_currentXp ?? 180);
-  int get postHireLevel => _postHireLevel ?? 1;
-  int get postHireXp => _postHireXp ?? 150;
+  bool get isHiredMode => currentStage != CareerStage.jobHunting;
+  CareerStage get normalizedMode =>
+      isHiredMode ? CareerStage.onboarding : CareerStage.jobHunting;
 
   int get currentLevel => isHiredMode ? postHireLevel : preJobLevel;
   int get currentPhaseXp => isHiredMode ? postHireXp : preJobXp;
@@ -707,36 +515,6 @@ class UserCareerProfile {
       ? (currentPhaseXp / targetPhaseXp).clamp(0.0, 1.0)
       : 0.0;
   String get phaseShortTag => isHiredMode ? 'POST-HIRE' : 'PRE-JOB';
-
-  // Legacy getters mapped cleanly to active phase EXP
-  int get level => currentLevel;
-  int get currentXp => currentPhaseXp;
-  int get totalXpEarned => _totalXpEarned ?? 430;
-  int get streakDays => _streakDays ?? 5;
-  int get applicationsSent => _applicationsSent ?? 3;
-  int get interviewsSecured => _interviewsSecured ?? 1;
-  List<WorkWin> get workWins => _workWins ?? const [];
-  List<DailyCheckIn> get checkIns => _checkIns ?? const [];
-  List<ScanScorePoint> get scoreHistory => _scoreHistory ?? const [];
-  bool get needsQuarterlyReminder => _needsQuarterlyReminder ?? false;
-  String get reminderMessage =>
-      _reminderMessage ??
-      "It's been 3 months — any new wins? Log your latest achievements so your living CV stays ready.";
-
-  SkillGapReport get skillGap =>
-      _skillGap ??
-      SkillGapReport(
-        jobTitle: targetRole,
-        language: 'en',
-        matchedKeywords: const ['Problem Solving', 'Project Execution'],
-        missingKeywords: const [],
-        gaps: const [],
-      );
-
-  bool get isHiredMode => currentStage != CareerStage.jobHunting;
-
-  CareerStage get normalizedMode =>
-      isHiredMode ? CareerStage.onboarding : CareerStage.jobHunting;
 
   List<CareerQuest> get activeModeQuests =>
       quests.where((q) => q.stage == normalizedMode).toList();
@@ -775,93 +553,42 @@ class UserCareerProfile {
     return 'Merge your latest wins into your living CV';
   }
 
-  static String todayDateKey() {
-    final now = DateTime.now();
-    final m = now.month.toString().padLeft(2, '0');
-    final d = now.day.toString().padLeft(2, '0');
-    return '${now.year}-$m-$d';
-  }
-
-  bool get hasCheckedInToday {
-    final today = todayDateKey();
-    return checkIns.any((c) => c.dateKey == today);
-  }
-
-  int get xpToNextLevel => targetPhaseXp;
-
-  double get levelProgress => xpProgress;
-
-  String get rankTitle {
-    if (isHiredMode) return 'Hired · First 90 Days';
-    return 'Job Hunt Mode';
-  }
-
-  int get completedQuestsCount => quests.where((q) => q.isCompleted).length;
-
-  int get earnedBadgesCount => badges.where((b) => b.isEarned).length;
-
   UserCareerProfile copyWith({
     String? characterName,
     String? targetRole,
-    int? level,
-    int? currentXp,
     int? preJobLevel,
     int? preJobXp,
     int? postHireLevel,
     int? postHireXp,
     int? totalXpEarned,
-    int? streakDays,
     int? latestAtsScore,
-    int? applicationsSent,
-    int? interviewsSecured,
     CareerStage? currentStage,
     List<CareerQuest>? quests,
-    List<SkillNode>? skills,
     List<CareerBadge>? badges,
     List<WorkWin>? workWins,
-    List<DailyCheckIn>? checkIns,
     List<ScanScorePoint>? scoreHistory,
     SkillGapReport? skillGap,
-    bool? needsQuarterlyReminder,
-    String? reminderMessage,
     ImprovedCV? latestMergedCv,
     CareerBadge? pendingToastBadge,
     bool clearToastBadge = false,
     LevelUpEvent? pendingLevelUpEvent,
     bool clearLevelUpEvent = false,
   }) {
-    final nextStage = currentStage ?? this.currentStage;
-    final nextIsHired = nextStage != CareerStage.jobHunting;
-    final resolvedPreLevel = preJobLevel ?? this.preJobLevel;
-    final resolvedPreXp = preJobXp ?? this.preJobXp;
-    final resolvedPostLevel = postHireLevel ?? this.postHireLevel;
-    final resolvedPostXp = postHireXp ?? this.postHireXp;
-
     return UserCareerProfile(
       characterName: characterName ?? this.characterName,
       targetRole: targetRole ?? this.targetRole,
-      level: level ?? (nextIsHired ? resolvedPostLevel : resolvedPreLevel),
-      currentXp: currentXp ?? (nextIsHired ? resolvedPostXp : resolvedPreXp),
-      preJobLevel: resolvedPreLevel,
-      preJobXp: resolvedPreXp,
-      postHireLevel: resolvedPostLevel,
-      postHireXp: resolvedPostXp,
+      preJobLevel: preJobLevel ?? this.preJobLevel,
+      preJobXp: preJobXp ?? this.preJobXp,
+      postHireLevel: postHireLevel ?? this.postHireLevel,
+      postHireXp: postHireXp ?? this.postHireXp,
       totalXpEarned: totalXpEarned ?? this.totalXpEarned,
-      streakDays: streakDays ?? this.streakDays,
       latestAtsScore: latestAtsScore ?? this.latestAtsScore,
-      applicationsSent: applicationsSent ?? this.applicationsSent,
-      interviewsSecured: interviewsSecured ?? this.interviewsSecured,
-      currentStage: nextStage,
+      currentStage: currentStage ?? this.currentStage,
       quests: quests ?? this.quests,
-      skills: skills ?? this.skills,
       badges: badges ?? this.badges,
       workWins: workWins ?? this.workWins,
-      checkIns: checkIns ?? this.checkIns,
       scoreHistory: scoreHistory ?? this.scoreHistory,
       skillGap: skillGap ?? this.skillGap,
-      needsQuarterlyReminder:
-          needsQuarterlyReminder ?? this.needsQuarterlyReminder,
-      reminderMessage: reminderMessage ?? this.reminderMessage,
       latestMergedCv: latestMergedCv ?? this.latestMergedCv,
       pendingToastBadge: clearToastBadge
           ? null

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/career_icons.dart';
 import '../../models/career_companion_model.dart';
 import '../../providers/auth_provider.dart';
@@ -53,16 +53,16 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.add_task_rounded, color: AppColors.terracottaBright),
-              SizedBox(width: 12),
+              const Icon(Icons.add_task_rounded, color: AppColors.terracottaBright),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Add Self-Reported Goal',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
+                  style: AppTheme.display(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.white,
                   ),
                 ),
@@ -74,14 +74,17 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Add a custom job-hunt or onboarding task to your personal checklist.',
-                  style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+                  style: AppTheme.body(
+                    fontSize: 12.5,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: titleCtrl,
-                  style: const TextStyle(color: AppColors.white),
+                  style: AppTheme.body(color: AppColors.white),
                   decoration: const InputDecoration(
                     labelText: 'Checklist Goal',
                     hintText: 'e.g. Tailor CV for 3 Data Analyst openings',
@@ -91,7 +94,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 TextField(
                   controller: descCtrl,
                   maxLines: 2,
-                  style: const TextStyle(color: AppColors.white),
+                  style: AppTheme.body(color: AppColors.white),
                   decoration: const InputDecoration(
                     labelText: 'Concrete Deliverable',
                     hintText: 'Include SQL & Tableau project metrics',
@@ -103,9 +106,12 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: AppColors.textMuted),
+                style: AppTheme.label(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             ElevatedButton(
@@ -118,7 +124,6 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                           : descCtrl.text.trim(),
                       stage: activeMode,
                       difficulty: QuestDifficulty.easy,
-                      impactTag: 'Self-reported',
                     );
                 Navigator.pop(ctx);
               },
@@ -156,7 +161,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 Expanded(
                   child: Text(
                     msg,
-                    style: const TextStyle(
+                    style: AppTheme.body(
                       color: AppColors.white,
                       fontSize: 12.5,
                     ),
@@ -180,7 +185,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                     ),
                     child: Text(
                       isWinQuest ? 'Open Wins' : 'Open Scanner',
-                      style: const TextStyle(
+                      style: AppTheme.label(
                         fontWeight: FontWeight.w700,
                         fontSize: 12.5,
                       ),
@@ -230,16 +235,15 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Verified Progress',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: AppTheme.display(
                         fontSize: 24,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                         color: AppColors.white,
-                        letterSpacing: -0.5,
                       ),
                     ),
                   ),
@@ -290,9 +294,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                         isHired ? 'First 90 Days' : 'Job Hunt Mode',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
+                        style: AppTheme.display(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.white,
                         ),
                       ),
@@ -311,9 +315,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        child: const Text(
+                        child: Text(
                           'Job Hunt',
-                          style: TextStyle(
+                          style: AppTheme.label(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -333,11 +337,12 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        child: const Text(
+                        child: Text(
                           'I got the job',
-                          style: TextStyle(
+                          style: AppTheme.label(
                             fontSize: 12,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.white,
                           ),
                         ),
                       ),
@@ -351,18 +356,18 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _FilterChipPill(
+                  _SelectablePill(
                     label: 'All',
                     selected: _activeSection == 'all',
                     onTap: () => setState(() => _activeSection = 'all'),
                   ),
-                  _FilterChipPill(
+                  _SelectablePill(
                     label:
                         'Checklist (${profile.activeModeCompletedCount}/${profile.activeModeTotalCount})',
                     selected: _activeSection == 'checklist',
                     onTap: () => setState(() => _activeSection = 'checklist'),
                   ),
-                  _FilterChipPill(
+                  _SelectablePill(
                     label: 'Skill Gap (${effectiveSkillGap.gaps.length})',
                     selected: _activeSection == 'skill_gap',
                     onTap: () => setState(() => _activeSection = 'skill_gap'),
@@ -414,20 +419,20 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const Row(
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.timeline_rounded,
                     color: AppColors.terracottaBright,
                     size: 20,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     'ATS Score History',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
+                    style: AppTheme.display(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.white,
                     ),
                   ),
@@ -446,9 +451,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                   ),
                   child: Text(
                     profile.timelineLabel,
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
+                    style: AppTheme.numeric(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.terracottaBright,
                     ),
                   ),
@@ -468,10 +473,10 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             ),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Scan your CV to track score changes.',
-                    style: TextStyle(
+                    style: AppTheme.body(
                       fontSize: 12.5,
                       color: AppColors.textSecondary,
                     ),
@@ -490,9 +495,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text(
+                    child: Text(
                       'Scan CV',
-                      style: TextStyle(
+                      style: AppTheme.label(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                       ),
@@ -536,7 +541,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                           children: [
                             Text(
                               '${point.overallScore}',
-                              style: GoogleFonts.jetBrainsMono(
+                              style: AppTheme.numeric(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
                                 color: scoreColor,
@@ -544,9 +549,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                             ),
                             Text(
                               '/100',
-                              style: GoogleFonts.jetBrainsMono(
+                              style: AppTheme.numeric(
                                 fontSize: 12,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                                 color: AppColors.textMuted,
                               ),
                             ),
@@ -556,9 +561,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                                 isPositive
                                     ? '+${point.scoreDelta} pts'
                                     : '${point.scoreDelta} pts',
-                                style: GoogleFonts.jetBrainsMono(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w800,
+                                style: AppTheme.numeric(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
                                   color: isPositive
                                       ? AppColors.emerald
                                       : AppColors.crimson,
@@ -569,8 +574,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                         ),
                         Text(
                           point.createdAtLabel,
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 11,
+                          style: AppTheme.numeric(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
                             color: AppColors.textMuted,
                           ),
                         ),
@@ -582,7 +588,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                     '${point.fileName} · ${point.jobTitle}',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: AppTheme.body(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: AppColors.white,
@@ -608,7 +614,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                             Expanded(
                               child: Text(
                                 'Fixed: ${fi.title}',
-                                style: const TextStyle(
+                                style: AppTheme.body(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.emerald,
@@ -646,9 +652,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 profile.isHiredMode
                     ? 'First 90 Days Checklist'
                     : 'Job-Hunt & ATS Checklist',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
+                style: AppTheme.display(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.white,
                 ),
               ),
@@ -656,9 +662,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             const SizedBox(width: 8),
             Text(
               '$pct%',
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
+              style: AppTheme.numeric(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
                 color: AppColors.emerald,
               ),
             ),
@@ -735,12 +741,13 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                                   quest.title,
                                   maxLines: isExpanded ? 3 : 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
+                                  style: AppTheme.body(
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.w700,
                                     color: quest.isCompleted
                                         ? AppColors.textSecondary
                                         : AppColors.white,
+                                  ).copyWith(
                                     decoration: quest.isCompleted
                                         ? TextDecoration.lineThrough
                                         : null,
@@ -749,9 +756,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   _shortVerificationTag(quest.verificationType),
-                                  style: GoogleFonts.jetBrainsMono(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
+                                  style: AppTheme.label(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
                                     color: isVerifiedType
                                         ? AppColors.terracottaBright
                                         : AppColors.textMuted,
@@ -803,7 +810,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                               const SizedBox(height: 12),
                               Text(
                                 quest.description,
-                                style: const TextStyle(
+                                style: AppTheme.body(
                                   fontSize: 12,
                                   color: AppColors.textSecondary,
                                   height: 1.45,
@@ -826,7 +833,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                                   ),
                                   child: Text(
                                     isWinQuest ? 'Open Wins' : 'Open Scanner',
-                                    style: const TextStyle(
+                                    style: AppTheme.label(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -863,11 +870,14 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               ),
             ),
             icon: const Icon(Icons.add_rounded, size: 16),
-            label: const Text(
+            label: Text(
               'Add Self-Reported Goal',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+              style: AppTheme.label(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
@@ -891,20 +901,21 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                 children: [
                   Text(
                     isId
-                        ? 'ANALISIS KESENJANGAN KEAHLIAN'
-                        : 'SKILL GAP & ACTION PLAN',
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
+                        ? 'Analisis Kesenjangan Keahlian'
+                        : 'Skill Gap & Action Plan',
+                    style: AppTheme.label(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.terracottaBright,
+                      letterSpacing: 0.1,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     report.jobTitle,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
+                    style: AppTheme.display(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.white,
                     ),
                   ),
@@ -916,15 +927,17 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _MiniTogglePill(
+                _SelectablePill(
                   label: 'EN',
                   selected: !isId,
+                  compact: true,
                   onTap: () => setState(() => _langOverride = 'en'),
                 ),
                 const SizedBox(width: 4),
-                _MiniTogglePill(
+                _SelectablePill(
                   label: 'ID',
                   selected: isId,
+                  compact: true,
                   onTap: () => setState(() => _langOverride = 'id'),
                 ),
               ],
@@ -954,9 +967,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  labelStyle: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
+                  labelStyle: AppTheme.label(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                     color: isSelected
                         ? AppColors.terracottaBright
                         : AppColors.textSecondary,
@@ -971,13 +984,13 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
         if (report.matchedKeywords.isNotEmpty) ...[
           Text(
             isId
-                ? 'KATA KUNCI TERDETEKSI DI CV ANDA (${report.matchedKeywords.length})'
-                : 'MATCHED IN YOUR CV (${report.matchedKeywords.length})',
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w800,
+                ? 'Kata Kunci Terdeteksi di CV Anda (${report.matchedKeywords.length})'
+                : 'Matched in Your CV (${report.matchedKeywords.length})',
+            style: AppTheme.numeric(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
               color: AppColors.textSecondary,
-              letterSpacing: 0.5,
+              letterSpacing: 0.1,
             ),
           ),
           const SizedBox(height: 8),
@@ -1009,9 +1022,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                     Flexible(
                       child: Text(
                         kw,
-                        style: const TextStyle(
+                        style: AppTheme.label(
                           fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.emerald,
                         ),
                       ),
@@ -1026,13 +1039,13 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
 
         Text(
           isId
-              ? 'KATA KUNCI BELUM TERCANTUM & AKSI KONKRET (${report.gaps.length})'
-              : 'MISSING KEYWORDS & CONCRETE ACTIONS (${report.gaps.length})',
-          style: GoogleFonts.jetBrainsMono(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w800,
+              ? 'Kata Kunci Belum Tercantum & Aksi Konkret (${report.gaps.length})'
+              : 'Missing Keywords & Concrete Actions (${report.gaps.length})',
+          style: AppTheme.numeric(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
             color: AppColors.textSecondary,
-            letterSpacing: 0.5,
+            letterSpacing: 0.1,
           ),
         ),
         const SizedBox(height: 12),
@@ -1052,9 +1065,9 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
               isId
                   ? 'Luar biasa! Seluruh kata kunci utama untuk posisi ini telah tercantum di CV Anda.'
                   : 'All core keywords for this target role are present in your CV!',
-              style: const TextStyle(
+              style: AppTheme.body(
                 fontSize: 12.5,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 color: AppColors.emerald,
               ),
             ),
@@ -1082,17 +1095,17 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                       children: [
                         Text(
                           gap.keyword,
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
+                          style: AppTheme.label(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
                             color: AppColors.terracottaBright,
                           ),
                         ),
                         Text(
                           gap.actionTypeLabel,
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
+                          style: AppTheme.label(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.textMuted,
                           ),
                         ),
@@ -1102,16 +1115,16 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                   const SizedBox(height: 8),
                   Text(
                     gap.actionTitle,
-                    style: const TextStyle(
+                    style: AppTheme.body(
                       fontSize: 14,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.white,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     gap.concreteAction,
-                    style: const TextStyle(
+                    style: AppTheme.body(
                       fontSize: 12,
                       color: AppColors.textSecondary,
                       height: 1.45,
@@ -1129,17 +1142,18 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isId ? 'CONTOH POIN CV' : 'SAMPLE CV BULLET',
-                              style: GoogleFonts.jetBrainsMono(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
+                              isId ? 'Contoh Poin CV' : 'Sample CV Bullet',
+                              style: AppTheme.label(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
                                 color: AppColors.textMuted,
+                                letterSpacing: 0.1,
                               ),
                             ),
                             const SizedBox(height: 4),
                             PlaceholderRichText(
                               text: '• ${gap.sampleBullet}',
-                              baseStyle: const TextStyle(
+                              baseStyle: AppTheme.body(
                                 fontSize: 12,
                                 color: AppColors.white,
                                 height: 1.45,
@@ -1186,23 +1200,30 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
   }
 }
 
-class _FilterChipPill extends StatelessWidget {
+class _SelectablePill extends StatelessWidget {
   final String label;
   final bool selected;
+  final bool compact;
   final VoidCallback onTap;
 
-  const _FilterChipPill({
+  const _SelectablePill({
     required this.label,
     required this.selected,
     required this.onTap,
+    this.compact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final textColor =
+        selected ? AppColors.terracottaBright : AppColors.textSecondary;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: compact ? 4 : 8,
+        ),
         decoration: BoxDecoration(
           color: selected
               ? AppColors.terracotta.withValues(alpha: 0.22)
@@ -1214,53 +1235,10 @@ class _FilterChipPill extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: selected
-                ? AppColors.terracottaBright
-                : AppColors.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniTogglePill extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _MiniTogglePill({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: selected
-              ? AppColors.terracotta.withValues(alpha: 0.22)
-              : AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: selected ? AppColors.terracotta : AppColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.jetBrainsMono(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w800,
-            color: selected
-                ? AppColors.terracottaBright
-                : AppColors.textSecondary,
+          style: AppTheme.numeric(
+            fontSize: compact ? 11.5 : 12,
+            fontWeight: FontWeight.w600,
+            color: textColor,
           ),
         ),
       ),

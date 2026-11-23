@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../models/career_companion_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/leveledup_arrow.dart';
@@ -103,19 +104,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           ),
                         ),
                       ),
-                      const Row(
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          LeveledUpArrow(width: 24, height: 36),
-                          SizedBox(width: 12),
+                          const LeveledUpArrow(width: 24, height: 36),
+                          const SizedBox(width: 12),
                           Text.rich(
                             TextSpan(
-                              style: TextStyle(
+                              style: AppTheme.wordmark(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.8,
                               ),
-                              children: [
+                              children: const [
                                 TextSpan(
                                   text: 'Leveled',
                                   style: TextStyle(color: AppColors.white),
@@ -154,11 +155,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         Text(
                           _isLoginMode ? 'Welcome back' : 'Create your account',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: AppTheme.display(
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
                             color: AppColors.white,
-                            letterSpacing: -0.4,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -167,7 +167,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               ? 'Track your ATS progress, log work wins, and keep your CV updated.'
                               : 'Set up your profile to track ATS progress, log work wins, and keep your CV updated.',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: AppTheme.body(
                             fontSize: 13,
                             color: AppColors.textSecondary,
                             height: 1.45,
@@ -188,61 +188,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ),
                     child: Row(
                       children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _isLoginMode = true),
-                            behavior: HitTestBehavior.opaque,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeOutCubic,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: _isLoginMode
-                                    ? AppColors.terracotta
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Sign In',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: _isLoginMode
-                                      ? AppColors.white
-                                      : AppColors.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ),
+                        _buildModeTab(
+                          label: 'Sign In',
+                          selected: _isLoginMode,
+                          onTap: () => setState(() => _isLoginMode = true),
                         ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _isLoginMode = false),
-                            behavior: HitTestBehavior.opaque,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeOutCubic,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: !_isLoginMode
-                                    ? AppColors.terracotta
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Register',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: !_isLoginMode
-                                      ? AppColors.white
-                                      : AppColors.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ),
+                        _buildModeTab(
+                          label: 'Register',
+                          selected: !_isLoginMode,
+                          onTap: () => setState(() => _isLoginMode = false),
                         ),
                       ],
                     ),
@@ -289,7 +243,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           Expanded(
                             child: Text(
                               authState.errorMessage!,
-                              style: const TextStyle(
+                              style: AppTheme.body(
                                 fontSize: 12.5,
                                 color: AppColors.white,
                               ),
@@ -318,9 +272,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                       child: Text(
                         _isLoginMode ? 'Sign In' : 'Create Account',
-                        style: const TextStyle(
+                        style: AppTheme.label(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w600,
+                          color: AppColors.white,
                         ),
                       ),
                     ),
@@ -328,23 +283,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   const SizedBox(height: 16),
 
                   // 6. Subtle "or" Divider
-                  const Row(
+                  Row(
                     children: [
-                      Expanded(
+                      const Expanded(
                         child: Divider(color: AppColors.border, height: 1),
                       ),
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
                           'or',
-                          style: TextStyle(
+                          style: AppTheme.label(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: AppColors.textMuted,
                           ),
                         ),
                       ),
-                      Expanded(
+                      const Expanded(
                         child: Divider(color: AppColors.border, height: 1),
                       ),
                     ],
@@ -371,9 +326,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Try Instant Demo',
-                        style: TextStyle(
+                        style: AppTheme.label(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -389,68 +344,107 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
+  Widget _buildModeTab({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.terracotta : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTheme.label(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: selected ? AppColors.white : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabeledField({
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    required String hintText,
+    TextInputType? keyboardType,
+    bool isPassword = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTheme.label(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          obscureText: isPassword ? _obscurePassword : false,
+          style: AppTheme.body(color: AppColors.white, fontSize: 14),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: AppColors.textMuted, size: 20),
+            suffixIcon: isPassword
+                ? IconButton(
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: AppColors.textMuted,
+                      size: 20,
+                    ),
+                  )
+                : null,
+            hintText: hintText,
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildEmailPasswordFields({required String passwordHint}) => [
+        _buildLabeledField(
+          label: 'Email Address',
+          controller: _emailCtrl,
+          icon: Icons.mail_outline_rounded,
+          hintText: 'you@example.com',
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 16),
+        _buildLabeledField(
+          label: 'Password',
+          controller: _passwordCtrl,
+          icon: Icons.lock_outline_rounded,
+          hintText: passwordHint,
+          isPassword: true,
+        ),
+      ];
+
   Widget _buildLoginForm() {
     return Column(
       key: const ValueKey('login_form'),
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Email Address',
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _emailCtrl,
-          keyboardType: TextInputType.emailAddress,
-          style: const TextStyle(color: AppColors.white, fontSize: 14),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(
-              Icons.mail_outline_rounded,
-              color: AppColors.textMuted,
-              size: 20,
-            ),
-            hintText: 'you@example.com',
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Password',
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _passwordCtrl,
-          obscureText: _obscurePassword,
-          style: const TextStyle(color: AppColors.white, fontSize: 14),
-          decoration: InputDecoration(
-            prefixIcon: const Icon(
-              Icons.lock_outline_rounded,
-              color: AppColors.textMuted,
-              size: 20,
-            ),
-            suffixIcon: IconButton(
-              onPressed: () =>
-                  setState(() => _obscurePassword = !_obscurePassword),
-              icon: Icon(
-                _obscurePassword
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                color: AppColors.textMuted,
-                size: 20,
-              ),
-            ),
-            hintText: 'Enter your password',
-          ),
-        ),
-      ],
+      children: _buildEmailPasswordFields(passwordHint: 'Enter your password'),
     );
   }
 
@@ -459,110 +453,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       key: const ValueKey('register_form'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Full Name',
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
+        _buildLabeledField(
+          label: 'Full Name',
           controller: _nameCtrl,
-          style: const TextStyle(color: AppColors.white, fontSize: 14),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(
-              Icons.person_outline_rounded,
-              color: AppColors.textMuted,
-              size: 20,
-            ),
-            hintText: 'e.g. Ijul',
-          ),
+          icon: Icons.person_outline_rounded,
+          hintText: 'e.g. Ijul',
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Target Role',
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
+        _buildLabeledField(
+          label: 'Target Role',
           controller: _roleCtrl,
-          style: const TextStyle(color: AppColors.white, fontSize: 14),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(
-              Icons.work_outline_rounded,
-              color: AppColors.textMuted,
-              size: 20,
-            ),
-            hintText: 'e.g. Global Software & Mobile Engineer',
-          ),
+          icon: Icons.work_outline_rounded,
+          hintText: 'e.g. Global Software & Mobile Engineer',
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Email Address',
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _emailCtrl,
-          keyboardType: TextInputType.emailAddress,
-          style: const TextStyle(color: AppColors.white, fontSize: 14),
-          decoration: const InputDecoration(
-            prefixIcon: Icon(
-              Icons.mail_outline_rounded,
-              color: AppColors.textMuted,
-              size: 20,
-            ),
-            hintText: 'you@example.com',
-          ),
-        ),
+        ..._buildEmailPasswordFields(passwordHint: 'Create a password'),
         const SizedBox(height: 16),
-        const Text(
-          'Password',
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _passwordCtrl,
-          obscureText: _obscurePassword,
-          style: const TextStyle(color: AppColors.white, fontSize: 14),
-          decoration: InputDecoration(
-            prefixIcon: const Icon(
-              Icons.lock_outline_rounded,
-              color: AppColors.textMuted,
-              size: 20,
-            ),
-            suffixIcon: IconButton(
-              onPressed: () =>
-                  setState(() => _obscurePassword = !_obscurePassword),
-              icon: Icon(
-                _obscurePassword
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                color: AppColors.textMuted,
-                size: 20,
-              ),
-            ),
-            hintText: 'Create a password',
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Text(
+        Text(
           'Current Stage',
-          style: TextStyle(
+          style: AppTheme.label(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
             color: AppColors.textSecondary,
@@ -572,10 +481,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: [
-            CareerStage.jobHunting,
-            CareerStage.onboarding,
-          ].map((stage) {
+          children: CareerStage.values.map((stage) {
             final isSel = stage == _selectedInitialStage;
             return ChoiceChip(
               label: Text(
@@ -595,7 +501,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              labelStyle: TextStyle(
+              labelStyle: AppTheme.label(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: isSel ? AppColors.white : AppColors.textSecondary,

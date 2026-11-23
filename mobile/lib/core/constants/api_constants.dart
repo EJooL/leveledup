@@ -21,12 +21,8 @@ class ApiConstants {
   static const String progressEndpoint = '/api/progress';
   static const String questToggleEndpoint = '/api/progress/quest-toggle';
   static const String careerModeEndpoint = '/api/progress/mode';
-  static const String healthEndpoint = '/api/health';
 
   static const String defaultVipCode = 'LEVELEDUPVIP2026';
-
-  /// Feature flag: hides Daily Check-In from UI without deleting code or data
-  static const bool enableDailyCheckIn = false;
 
   /// Sample Bahasa Indonesia CV for instant testing
   static const String sampleCvTextId = '''

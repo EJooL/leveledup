@@ -1,13 +1,3 @@
-enum IssueSeverity { critical, warning, suggestion }
-
-enum IssueCategory {
-  personalInfo,
-  atsReadability,
-  keywordMatch,
-  achievements,
-  languageQuality,
-}
-
 class RewriteExample {
   final String before;
   final String after;
@@ -20,8 +10,6 @@ class RewriteExample {
       after: json['after']?.toString() ?? '',
     );
   }
-
-  Map<String, dynamic> toJson() => {'before': before, 'after': after};
 }
 
 class Issue {
@@ -75,16 +63,6 @@ class Issue {
           : null,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'category': category,
-        'severity': severity,
-        'title': title,
-        'detail': detail,
-        'fix': fix,
-        'rewrite': rewrite?.toJson(),
-      };
 }
 
 class KeywordMatch {
@@ -113,13 +91,6 @@ class KeywordMatch {
       missingCount: count,
     );
   }
-
-  Map<String, dynamic> toJson() => {
-        'jobTitle': jobTitle,
-        'matched': matched,
-        'missing': missing,
-        'missingCount': missingCount,
-      };
 }
 
 class AnalysisResult {
@@ -169,10 +140,6 @@ class AnalysisResult {
       engine: meta['engine']?.toString() ?? 'rule-based',
       isUnlocked: hasUnlockedDetails,
     );
-  }
-
-  int countByCategory(String catId) {
-    return issues.where((i) => i.category == catId).length;
   }
 }
 

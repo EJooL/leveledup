@@ -2,21 +2,16 @@ import 'package:flutter/material.dart';
 import '../../models/career_companion_model.dart';
 import '../theme/app_colors.dart';
 
-/// Shared icon and accent mapping for Career Quests and RPG Skill Nodes.
-/// Keeps Active Career Quests, Quest Log, and Skill Tree icons distinctive
-/// and thematically aligned without duplicating mapping logic.
+/// Shared icon and accent mapping for Career Quests and Brag Doc categories.
 class CareerIcons {
   CareerIcons._();
 
   static IconData forQuest(CareerQuest quest) {
     switch (quest.id) {
-      case 'q_scan_cv':
       case 'q_first_scan':
         return Icons.document_scanner_rounded;
-      case 'q_remove_bias':
       case 'q_purge_bias':
         return Icons.privacy_tip_rounded;
-      case 'q_star_rewrite':
       case 'q_fix_duties':
         return Icons.auto_awesome_rounded;
       case 'q_fix_no_metrics':
@@ -27,37 +22,22 @@ class CareerIcons {
         return Icons.spellcheck_rounded;
       case 'q_fix_too_short':
         return Icons.subject_rounded;
-      case 'q_github_pins':
       case 'q_self_portfolio':
         return Icons.folder_special_rounded;
-      case 'q_linkedin_opt':
       case 'q_self_linkedin':
         return Icons.badge_rounded;
-      case 'q_send_5_apps':
       case 'q_self_applications':
         return Icons.rocket_launch_rounded;
-      case 'q_first_pr':
       case 'hired_first_deliverable':
         return Icons.assignment_turned_in_rounded;
-      case 'q_manager_1on1':
       case 'hired_align_goals':
         return Icons.track_changes_rounded;
       case 'hired_log_first_win':
         return Icons.emoji_events_rounded;
       case 'hired_merge_win_cv':
-        return Icons.picture_as_pdf_rounded;
+        return Icons.description_rounded;
       case 'hired_30day_feedback':
         return Icons.forum_rounded;
-      case 'q_onboarding_doc':
-        return Icons.menu_book_rounded;
-      case 'q_perf_opt':
-        return Icons.speed_rounded;
-      case 'q_code_reviews':
-        return Icons.rate_review_rounded;
-      case 'q_system_rfc':
-        return Icons.architecture_rounded;
-      case 'q_mentor_junior':
-        return Icons.school_rounded;
     }
 
     final text = '${quest.title} ${quest.impactMetricTag}'.toLowerCase();
@@ -90,8 +70,6 @@ class CareerIcons {
         return Icons.trending_up_rounded;
       case QuestDifficulty.hard:
         return Icons.local_fire_department_rounded;
-      case QuestDifficulty.boss:
-        return Icons.emoji_events_rounded;
     }
   }
 
@@ -104,28 +82,7 @@ class CareerIcons {
         return AppColors.terracottaBright;
       case QuestDifficulty.hard:
         return AppColors.accentGoldBright;
-      case QuestDifficulty.boss:
-        return AppColors.terracottaBright;
     }
-  }
-
-  static IconData forSkill(SkillNode skill) {
-    switch (skill.id) {
-      case 'sk_clean_code':
-        return Icons.layers_rounded;
-      case 'sk_api_perf':
-        return Icons.dns_rounded;
-      case 'sk_sys_design':
-        return Icons.hub_rounded;
-      case 'sk_star_story':
-        return Icons.auto_stories_rounded;
-      case 'sk_async_comm':
-        return Icons.public_rounded;
-      case 'sk_tech_mentorship':
-        return Icons.diversity_3_rounded;
-    }
-
-    return forBranch(skill.branch);
   }
 
   static IconData forBranch(SkillBranch branch) {
@@ -141,11 +98,6 @@ class CareerIcons {
     }
   }
 
-  static Color forSkillAccent(SkillNode skill) {
-    if (skill.isMaxed) return AppColors.emerald;
-    return forBranchAccent(skill.branch);
-  }
-
   static Color forBranchAccent(SkillBranch branch) {
     switch (branch) {
       case SkillBranch.technical:
@@ -159,4 +111,3 @@ class CareerIcons {
     }
   }
 }
-

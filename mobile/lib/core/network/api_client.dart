@@ -255,53 +255,50 @@ class ApiClient {
     );
   }
 
+  static final List<RegExp> _idMarkers = [
+    RegExp(r'\bpengalaman\b'),
+    RegExp(r'\bpendidikan\b'),
+    RegExp(r'\bkeahlian\b'),
+    RegExp(r'\bkemampuan\b'),
+    RegExp(r'\bringkasan\b'),
+    RegExp(r'\btentang\s+saya\b'),
+    RegExp(r'\bbertanggung\s+jawab\b'),
+    RegExp(r'\btanggal\s+lahir\b'),
+    RegExp(r'\bttl\b'),
+    RegExp(r'\bagama\b'),
+    RegExp(r'\bstatus\b'),
+    RegExp(r'\bsekarang\b'),
+    RegExp(r'\bpekerja\s+keras\b'),
+    RegExp(r'\bmembantu\b'),
+    RegExp(r'\bmengelola\b'),
+    RegExp(r'\bmeningkatkan\b'),
+    RegExp(r'\bkampanye\b'),
+    RegExp(r'\blaporan\b'),
+  ];
+
+  static final List<RegExp> _enMarkers = [
+    RegExp(r'\bexperience\b'),
+    RegExp(r'\beducation\b'),
+    RegExp(r'\bskills\b'),
+    RegExp(r'\bsummary\b'),
+    RegExp(r'\bresponsible\s+for\b'),
+    RegExp(r'\bpresent\b'),
+    RegExp(r'\bengineered\b'),
+    RegExp(r'\bdeveloped\b'),
+    RegExp(r'\bmanaged\b'),
+    RegExp(r'\bassisted\b'),
+    RegExp(r'\bdate\s+of\s+birth\b'),
+    RegExp(r'\bmarital\s+status\b'),
+  ];
+
+  Options _deviceOptions(String deviceId) =>
+      Options(headers: {'x-device-id': deviceId});
+
   /// Automatically detect whether the CV text is in Bahasa Indonesia ('id') or English ('en')
   static String detectLanguage(String text) {
     final lower = text.toLowerCase();
-    final idMarkers = [
-      RegExp(r'\bpengalaman\b'),
-      RegExp(r'\bpendidikan\b'),
-      RegExp(r'\bkeahlian\b'),
-      RegExp(r'\bkemampuan\b'),
-      RegExp(r'\bringkasan\b'),
-      RegExp(r'\btentang\s+saya\b'),
-      RegExp(r'\bbertanggung\s+jawab\b'),
-      RegExp(r'\btanggal\s+lahir\b'),
-      RegExp(r'\bttl\b'),
-      RegExp(r'\bagama\b'),
-      RegExp(r'\bstatus\b'),
-      RegExp(r'\bsekarang\b'),
-      RegExp(r'\bpekerja\s+keras\b'),
-      RegExp(r'\bmembantu\b'),
-      RegExp(r'\bmengelola\b'),
-      RegExp(r'\bmeningkatkan\b'),
-      RegExp(r'\bkampanye\b'),
-      RegExp(r'\blaporan\b'),
-    ];
-    final enMarkers = [
-      RegExp(r'\bexperience\b'),
-      RegExp(r'\beducation\b'),
-      RegExp(r'\bskills\b'),
-      RegExp(r'\bsummary\b'),
-      RegExp(r'\bresponsible\s+for\b'),
-      RegExp(r'\bpresent\b'),
-      RegExp(r'\bengineered\b'),
-      RegExp(r'\bdeveloped\b'),
-      RegExp(r'\bmanaged\b'),
-      RegExp(r'\bassisted\b'),
-      RegExp(r'\bdate\s+of\s+birth\b'),
-      RegExp(r'\bmarital\s+status\b'),
-    ];
-
-    var idCount = 0;
-    var enCount = 0;
-    for (final rx in idMarkers) {
-      if (rx.hasMatch(lower)) idCount++;
-    }
-    for (final rx in enMarkers) {
-      if (rx.hasMatch(lower)) enCount++;
-    }
-
+    final idCount = _idMarkers.where((rx) => rx.hasMatch(lower)).length;
+    final enCount = _enMarkers.where((rx) => rx.hasMatch(lower)).length;
     return idCount > enCount ? 'id' : 'en';
   }
 
@@ -323,7 +320,7 @@ class ApiClient {
       final response = await _dio.post(
         ApiConstants.parseEndpoint,
         data: formData,
-        options: Options(headers: {'x-device-id': deviceId}),
+        options: _deviceOptions(deviceId),
       );
 
       final data = response.data as Map<String, dynamic>;
@@ -365,7 +362,7 @@ class ApiClient {
           'hasPhoto': hasPhoto,
           'deviceId': resolvedDeviceId,
         },
-        options: Options(headers: {'x-device-id': resolvedDeviceId}),
+        options: _deviceOptions(resolvedDeviceId),
       );
 
       final data = response.data as Map<String, dynamic>;
@@ -411,7 +408,7 @@ class ApiClient {
           'token': encryptedToken,
           'code': accessCode.trim().toUpperCase(),
         },
-        options: Options(headers: {'x-device-id': deviceId}),
+        options: _deviceOptions(deviceId),
       );
 
       final data = response.data as Map<String, dynamic>;
@@ -453,7 +450,7 @@ class ApiClient {
           'code': accessCode.trim().toUpperCase(),
           'fileName': fileName,
         },
-        options: Options(headers: {'x-device-id': deviceId}),
+        options: _deviceOptions(deviceId),
       );
 
       final data = response.data as Map<String, dynamic>;
@@ -470,22 +467,18 @@ class ApiClient {
     }
   }
 
-  /// 5. GET /api/wins — Fetch persisted Brag Doc wins & 90-day reminder status
-  Future<Map<String, dynamic>?> fetchWins({bool simulateReminder = false}) async {
+  /// 5. GET /api/wins — Fetch persisted Brag Doc wins
+  Future<Map<String, dynamic>?> fetchWins() async {
     try {
       final deviceId = await getDeviceId();
       final response = await _dio.get(
         ApiConstants.winsEndpoint,
-        queryParameters: {
-          'deviceId': deviceId,
-          if (simulateReminder) 'simulateReminder': 'true',
-        },
-        options: Options(headers: {'x-device-id': deviceId}),
+        queryParameters: {'deviceId': deviceId},
+        options: _deviceOptions(deviceId),
       );
-      if (response.data is Map<String, dynamic>) {
-        return response.data as Map<String, dynamic>;
-      }
-      return null;
+      return response.data is Map<String, dynamic>
+          ? response.data as Map<String, dynamic>
+          : null;
     } catch (_) {
       return null;
     }
@@ -509,7 +502,7 @@ class ApiClient {
           'category': category,
           if (language != null) 'language': language,
         },
-        options: Options(headers: {'x-device-id': deviceId}),
+        options: _deviceOptions(deviceId),
       );
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
@@ -558,7 +551,7 @@ class ApiClient {
               'changes': baseCv.changes,
             },
         },
-        options: Options(headers: {'x-device-id': deviceId}),
+        options: _deviceOptions(deviceId),
       );
 
       final data = response.data as Map<String, dynamic>;
@@ -699,7 +692,7 @@ class ApiClient {
       final response = await _dio.get(
         ApiConstants.progressEndpoint,
         queryParameters: {'deviceId': deviceId},
-        options: Options(headers: {'x-device-id': deviceId}),
+        options: _deviceOptions(deviceId),
       );
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
@@ -720,7 +713,7 @@ class ApiClient {
           'deviceId': deviceId,
           'questKey': questKey,
         },
-        options: Options(headers: {'x-device-id': deviceId}),
+        options: _deviceOptions(deviceId),
       );
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
@@ -747,7 +740,7 @@ class ApiClient {
           if (displayName != null) 'displayName': displayName,
           if (targetRole != null) 'targetRole': targetRole,
         },
-        options: Options(headers: {'x-device-id': deviceId}),
+        options: _deviceOptions(deviceId),
       );
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;

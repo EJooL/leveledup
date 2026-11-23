@@ -19,7 +19,7 @@ class AppColors {
   static const Color textPrimary = Color(0xFFFAFAFA);     // Headline & Primary Text
   static const Color textSecondary = Color(0xFFA1A1AA);   // Body Copy (Zinc-400) #a1a1aa
   static const Color textMuted = Color(0xFF71717A);       // Sub-labels (Zinc-500) #71717a
-  static const Color textDim = Color(0xFF52525B);         // Monospace privacy note #52525b
+  static const Color textDim = Color(0xFF52525B);         // Subtle privacy note #52525b
 
   // Signature Brand Terracotta & Gamified Accents
   static const Color terracotta = Color(0xFFB5462F);      // Primary LevUp Terracotta #b5462f
@@ -27,12 +27,10 @@ class AppColors {
   static const Color accentCyan = Color(0xFFB5462F);      // Mapped to Terracotta for unified brand
   static const Color accentGold = Color(0xFFD97706);      // Warm Amber / XP Gold
   static const Color accentGoldBright = Color(0xFFF59E0B);// Amber 500
-  static const Color accentPurple = Color(0xFFC2410C);    // Deep Rust Accent
 
   // Semantic Status Colors (ATS Score & Quests)
   static const Color emerald = Color(0xFF10B981);         // 80-100 Ready / Completed
   static const Color amber = Color(0xFFF59E0B);           // 60-79 Polish Needed
-  static const Color orange = Color(0xFFB5462F);          // 40-59 Needs Improvement
   static const Color crimson = Color(0xFFEF4444);         // <40 Critical Risk
 
   /// Helper to get color for an ATS score (0 - 100)

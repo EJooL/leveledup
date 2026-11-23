@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/career_icons.dart';
 import '../../core/utils/docx_generator.dart';
 import '../../models/career_companion_model.dart';
@@ -174,16 +174,15 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Work Wins',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: AppTheme.display(
                         fontSize: 24,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                         color: AppColors.white,
-                        letterSpacing: -0.5,
                       ),
                     ),
                   ),
@@ -200,9 +199,9 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                     ),
                     child: Text(
                       '${wins.length} Logged',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
+                      style: AppTheme.numeric(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.accentGoldBright,
                       ),
                     ),
@@ -210,9 +209,9 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                 ],
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Turn work achievements into CV bullets.',
-                style: TextStyle(
+                style: AppTheme.body(
                   fontSize: 13,
                   color: AppColors.textSecondary,
                 ),
@@ -238,11 +237,11 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                         alignment: WrapAlignment.spaceBetween,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          const Text(
+                          Text(
                             'New Win',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
+                            style: AppTheme.display(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.white,
                             ),
                           ),
@@ -278,7 +277,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                     const SizedBox(height: 16),
                     TextField(
                       controller: _titleCtrl,
-                      style: const TextStyle(
+                      style: AppTheme.body(
                         color: AppColors.white,
                         fontSize: 13.5,
                       ),
@@ -290,7 +289,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _impactCtrl,
-                      style: const TextStyle(
+                      style: AppTheme.body(
                         color: AppColors.white,
                         fontSize: 13.5,
                       ),
@@ -301,12 +300,12 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'CATEGORY',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
+                      'Category',
+                      style: AppTheme.label(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                         color: AppColors.textSecondary,
-                        letterSpacing: 0.6,
+                        letterSpacing: 0.1,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -332,8 +331,8 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(999),
                           ),
-                          labelStyle: TextStyle(
-                            fontSize: 11.5,
+                          labelStyle: AppTheme.label(
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: isSel
                                 ? AppColors.terracottaBright
@@ -363,11 +362,15 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                   color: AppColors.white,
                                 ),
                               )
-                            : const Text(
+                            : Text(
                                 'Save STAR Win',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontWeight: FontWeight.w800),
+                                style: AppTheme.label(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.white,
+                                ),
                               ),
                       ),
                     ),
@@ -380,12 +383,12 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Saved Wins',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                      style: AppTheme.display(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.white,
                       ),
                     ),
@@ -408,9 +411,9 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                         _selectedWinIds.length == wins.length
                             ? 'Clear'
                             : 'Select All (${wins.length})',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                        style: AppTheme.numeric(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
                           color: AppColors.terracottaBright,
                         ),
                       ),
@@ -432,10 +435,10 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: const Text(
+                  child: Text(
                     'No wins yet. Log your first achievement above.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: AppTheme.body(
                       fontSize: 12.5,
                       color: AppColors.textSecondary,
                     ),
@@ -509,7 +512,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                       children: [
                                         Text(
                                           win.title,
-                                          style: const TextStyle(
+                                          style: AppTheme.body(
                                             fontSize: 13.5,
                                             fontWeight: FontWeight.w700,
                                             color: AppColors.white,
@@ -518,8 +521,9 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                         const SizedBox(height: 4),
                                         Text(
                                           '${_shortBranchLabel(win.branch)} · ${win.dateLabel}',
-                                          style: GoogleFonts.jetBrainsMono(
-                                            fontSize: 10.5,
+                                          style: AppTheme.numeric(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500,
                                             color: AppColors.textMuted,
                                           ),
                                         ),
@@ -568,12 +572,13 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                   children: [
                                     Text(
                                       win.language == 'id'
-                                          ? 'POIN STAR'
-                                          : 'STAR BULLET',
-                                      style: GoogleFonts.jetBrainsMono(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
+                                          ? 'Poin STAR'
+                                          : 'STAR Bullet',
+                                      style: AppTheme.label(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
                                         color: AppColors.terracottaBright,
+                                        letterSpacing: 0.1,
                                       ),
                                     ),
                                     if (win.isMerged)
@@ -587,11 +592,12 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            'IN CV',
-                                            style: GoogleFonts.jetBrainsMono(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w800,
+                                            'In CV',
+                                            style: AppTheme.label(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w600,
                                               color: AppColors.emerald,
+                                              letterSpacing: 0.1,
                                             ),
                                           ),
                                         ],
@@ -602,7 +608,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                               const SizedBox(height: 8),
                               PlaceholderRichText(
                                 text: '• ${win.toStarBullet()}',
-                                baseStyle: const TextStyle(
+                                baseStyle: AppTheme.body(
                                   fontSize: 12.5,
                                   color: AppColors.white,
                                   height: 1.45,
@@ -656,9 +662,9 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                           : 'Add Recent Wins to My CV',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: AppTheme.numeric(
                         fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -693,9 +699,9 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                               activeLivingCv.isIndonesian
                                   ? 'Dokumen CV Hidup Anda (Siap Unduh DOCX)'
                                   : 'Your Living CV (Updated & DOCX-Ready)',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
+                              style: AppTheme.display(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
                                 color: AppColors.white,
                               ),
                             ),
@@ -705,7 +711,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                       const SizedBox(height: 8),
                       Text(
                         '${activeLivingCv.name} · ${activeLivingCv.title}',
-                        style: const TextStyle(
+                        style: AppTheme.body(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textSecondary,
@@ -727,11 +733,12 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  previewSection.heading.toUpperCase(),
-                                  style: GoogleFonts.jetBrainsMono(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w800,
+                                  previewSection.heading,
+                                  style: AppTheme.label(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
                                     color: AppColors.terracottaBright,
+                                    letterSpacing: 0.15,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -740,7 +747,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                     padding: const EdgeInsets.only(bottom: 8),
                                     child: PlaceholderRichText(
                                       text: '• $b',
-                                      baseStyle: const TextStyle(
+                                      baseStyle: AppTheme.body(
                                         fontSize: 12,
                                         color: AppColors.white,
                                         height: 1.45,
@@ -783,9 +790,9 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                                 : 'Download Updated Word CV (.docx)',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: AppTheme.label(
                               fontSize: 13.5,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -830,9 +837,9 @@ class _LangPill extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: GoogleFonts.jetBrainsMono(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w700,
+          style: AppTheme.label(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
             color: selected
                 ? AppColors.terracottaBright
                 : AppColors.textSecondary,
