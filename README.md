@@ -8,10 +8,10 @@ Unlike one-off resume checkers that you abandon once you submit an application, 
 Scan CV (PDF) ──► Fix ATS Flaws & Skill Gaps ──► "I got the job" (First 90 Days)
       ▲                                                        │
       │                                                        ▼
-Export Updated PDF ◄── Merge STAR Bullets ("Add to my CV") ◄── Log Win (Brag Doc)
+Export Updated DOCX ◄── Merge STAR Bullets ("Add to my CV") ◄── Log Win (Brag Doc)
 ```
 
-Every feature inside the app is tied to a real-world outcome: a higher ATS score verified across scans, clear actions for missing role skills, documented achievements ready for performance reviews, and an up-to-date `.pdf` resume you can export in one tap.
+Every feature inside the app is tied to a real-world outcome: a higher ATS score verified across scans, clear actions for missing role skills, documented achievements ready for performance reviews, and an up-to-date Word (`.docx`) resume you can export in one tap.
 
 ---
 
@@ -36,7 +36,7 @@ Your daily command center shows:
    - Quantified Impact (STAR Method)
    - Language Quality & Clichés
 4. **Unlock Full Fixes (`LEVELEDUPVIP2026`)**: Reveals detailed explanations, concrete fixes, Before/After examples, and all missing role keywords.
-5. **AI Rewrite & Local PDF Export**: Converts passive job duties into structured **STAR achievement bullets**, highlights missing metrics using **`[placeholder]`** tags, and exports a clean single-column `.pdf` directly to your device.
+5. **AI Rewrite & Local Word (`.docx`) Export**: Converts passive job duties into structured **STAR achievement bullets**, highlights missing metrics using **`[placeholder]`** tags, and formats your resume into the clean single-column reference layout (Summary, Education, Projects, Experience with right-aligned dates, grouped Skills, and Certifications) ready to download directly as **`.docx`** (`Download Word CV (.docx)`).
 
 > **Zero-Hallucination Guarantee:** LeveledUp **never** invents numbers, company names, or achievements you did not provide. Whenever a metric is missing, you will see highlighted markers such as `[X]%` or `[number]` so you can fill in your real results before sending your CV.
 
@@ -46,7 +46,7 @@ Your daily command center shows:
 Built for **both** job seekers (projects, internships, campus leadership) and employed users building their career record:
 1. **Log a Win**: Enter what you achieved, an optional measurable metric, and pick a role-agnostic category (*Project & Delivery*, *Metrics & Growth*, *Process & Quality*, or *Leadership & Teamwork*).
 2. **Instant STAR Bullet Conversion**: Gemini (with bilingual `ID`/`EN` rule-based fallback) turns your note into a polished STAR resume bullet — using `[placeholder]` tags if no metric was provided.
-3. **Add to My CV & Export PDF**: Select one or more saved wins, tap **`Add Selected to My CV`**, and download your updated **Living CV (`.pdf`)** immediately via **`Download Updated PDF CV (.pdf)`**.
+3. **Add to My CV & Export Word (`.docx`)**: Select one or more saved wins, tap **`Add Selected to My CV`**, and download your updated **Living CV (`.docx`)** immediately via **`Download Updated Word CV (.docx)`**.
 
 ---
 
@@ -80,7 +80,7 @@ cp .env.example .env
 # Initialize/sync all 8 MySQL tables in leveledup_db (starts XAMPP MySQL first)
 npm run init-db
 
-# Verify all 96 automated API, MySQL & AI guardrail assertions pass
+# Verify all 110 automated API, MySQL & AI guardrail assertions pass
 npm test
 
 # Start the API server on http://localhost:5000
@@ -103,8 +103,8 @@ flutter run -d chrome
 
 | Component | Stack / Details |
 | :--- | :--- |
-| **Frontend** | Flutter, Riverpod (`flutter_riverpod`), Dio, Google Fonts (`Poppins`, `JetBrains Mono`), Pure-Dart PDF 1.4 Generator |
-| **Backend** | Node.js, Express, `unpdf` (text + page-1 embedded photo detection), `@google/genai` (`gemini-2.5-flash`) with zero-hallucination guardrails & bilingual validation, AES-256-GCM token encryption |
+| **Frontend** | Flutter, Riverpod (`flutter_riverpod`), Dio, Google Fonts (`Poppins`, `JetBrains Mono`), Pure-Dart OOXML (`.docx`) Generator |
+| **Backend** | Node.js, Express, `unpdf` (text + page-1 embedded photo detection), `@google/genai` (`gemini-3-flash-preview` failover chain) with zero-hallucination guardrails & bilingual validation, AES-256-GCM token encryption |
 | **Database** | MySQL (`leveledup_db`) — 8 tables defined in [backend/sql/schema.sql](backend/sql/schema.sql) |
 | **Identity** | Zero-friction device-scoped UUID (`x-device-id` header stored via `SharedPreferences`) implemented in [ApiClient](mobile/lib/core/network/api_client.dart) |
 
