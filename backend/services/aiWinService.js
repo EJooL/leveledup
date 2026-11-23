@@ -6,6 +6,7 @@ const {
   hasBracketPlaceholder,
   sanitizeWinBulletResult,
   isBiasLine,
+  inferCvSectionType,
 } = require('./aiGuardrails');
 
 const CATEGORY_VERBS = {
@@ -186,14 +187,46 @@ function mergeWinsIntoCvObject(baseCv, winsToMerge = []) {
     sections: Array.isArray(baseCv?.sections)
       ? baseCv.sections
           .filter((s) => s && typeof s === 'object')
-          .map((s) => ({
-            heading: typeof s.heading === 'string' && s.heading.trim() ? s.heading.trim() : (isId ? 'Pengalaman Profesional' : 'Professional Experience'),
-            bullets: Array.isArray(s.bullets)
-              ? s.bullets
-                  .filter((b) => typeof b === 'string' && b.trim() && !isBiasLine(b))
-                  .map((b) => b.trim())
-              : [],
-          }))
+          .map((s) => {
+            const heading =
+              typeof s.heading === 'string' && s.heading.trim()
+                ? s.heading.trim()
+                : (isId ? 'Pengalaman' : 'Experience');
+            const type = inferCvSectionType(s.type, heading);
+            const mapped = {
+              heading,
+              type,
+              bullets: Array.isArray(s.bullets)
+                ? s.bullets
+                    .filter((b) => typeof b === 'string' && b.trim() && !isBiasLine(b))
+                    .map((b) => b.trim())
+                : [],
+            };
+            if (Array.isArray(s.entries) && s.entries.length > 0) {
+              mapped.entries = s.entries
+                .filter((e) => e && typeof e === 'object')
+                .map((e) => ({
+                  title: typeof e.title === 'string' ? e.title.trim() : '',
+                  date: typeof e.date === 'string' ? e.date.trim() : '',
+                  subtitle: typeof e.subtitle === 'string' ? e.subtitle.trim() : '',
+                  bullets: Array.isArray(e.bullets)
+                    ? e.bullets
+                        .filter((b) => typeof b === 'string' && b.trim() && !isBiasLine(b))
+                        .map((b) => b.trim())
+                    : [],
+                }));
+            }
+            if (Array.isArray(s.skillGroups) && s.skillGroups.length > 0) {
+              mapped.skillGroups = s.skillGroups
+                .filter((g) => g && typeof g === 'object')
+                .map((g) => ({
+                  category: typeof g.category === 'string' ? g.category.trim() : '',
+                  items: typeof g.items === 'string' ? g.items.trim() : '',
+                }))
+                .filter((g) => g.items);
+            }
+            return mapped;
+          })
       : [],
     changes: Array.isArray(baseCv?.changes)
       ? baseCv.changes.filter((c) => typeof c === 'string' && c.trim()).map((c) => c.trim())
@@ -203,11 +236,18 @@ function mergeWinsIntoCvObject(baseCv, winsToMerge = []) {
   if (cv.sections.length === 0) {
     cv.sections = [
       {
-        heading: isId ? 'Pengalaman Profesional & Proyek' : 'Professional Experience & Projects',
-        bullets: [],
-      },
-      {
         heading: isId ? 'Pendidikan' : 'Education',
+        type: 'education',
+        entries: [
+          {
+            title: isId ? '[Nama Universitas]' : '[University Name]',
+            date: isId ? '[Tahun Masuk] – [Tahun Lulus]' : '[Start Year] – [End Year]',
+            subtitle: '',
+            bullets: [
+              isId ? '[Gelar / Jurusan] | IPK [X.XX] / 4.00' : '[Degree / Major] | GPA [X.XX] / 4.00',
+            ],
+          },
+        ],
         bullets: [
           isId
             ? '[Gelar / Jurusan] — [Nama Universitas] ([Tahun Lulus])'
@@ -215,7 +255,29 @@ function mergeWinsIntoCvObject(baseCv, winsToMerge = []) {
         ],
       },
       {
-        heading: isId ? 'Keahlian & Kompetensi' : 'Skills & Competencies',
+        heading: isId ? 'Pengalaman' : 'Experience',
+        type: 'experience',
+        entries: [
+          {
+            title: isId ? 'Pencapaian & Pengalaman Terbaru' : 'Recent Experience & Achievements',
+            date: isId ? 'Sekarang' : 'Present',
+            subtitle: '',
+            bullets: [],
+          },
+        ],
+        bullets: [],
+      },
+      {
+        heading: isId ? 'Keahlian' : 'Skills',
+        type: 'skills',
+        skillGroups: [
+          {
+            category: isId ? 'Kompetensi Utama' : 'Core Competencies',
+            items: isId
+              ? 'Manajemen Proyek, Analisis Data, Komunikasi Profesional, Problem Solving'
+              : 'Project Execution, Data Analysis, Cross-Functional Collaboration, Problem Solving',
+          },
+        ],
         bullets: [
           isId
             ? 'Kompetensi Utama: Manajemen Proyek, Analisis Data, Komunikasi Profesional, Problem Solving'
@@ -226,10 +288,15 @@ function mergeWinsIntoCvObject(baseCv, winsToMerge = []) {
   }
 
   // Find the Experience / Projects section (or first section)
-  const expIdx = cv.sections.findIndex((s) =>
-    /pengalaman|experience|proyek|project|work|kerja/i.test(s.heading || '')
+  const expIdx = cv.sections.findIndex(
+    (s) =>
+      s.type === 'experience' ||
+      /pengalaman|experience|work|kerja/i.test(s.heading || '')
   );
-  const targetIdx = expIdx !== -1 ? expIdx : 0;
+  const projIdx = cv.sections.findIndex(
+    (s) => s.type === 'projects' || /proyek|project/i.test(s.heading || '')
+  );
+  const targetIdx = expIdx !== -1 ? expIdx : (projIdx !== -1 ? projIdx : 0);
 
   const existingBullets = cv.sections[targetIdx].bullets;
   const newBullets = [];
@@ -242,6 +309,23 @@ function mergeWinsIntoCvObject(baseCv, winsToMerge = []) {
   }
 
   cv.sections[targetIdx].bullets = [...newBullets, ...existingBullets];
+
+  // Keep structured entries synchronized when present
+  if (Array.isArray(cv.sections[targetIdx].entries) && newBullets.length > 0) {
+    if (cv.sections[targetIdx].entries.length === 0) {
+      cv.sections[targetIdx].entries.push({
+        title: isId ? 'Pencapaian Terbaru' : 'Recent Achievements',
+        date: isId ? 'Sekarang' : 'Present',
+        subtitle: '',
+        bullets: [...newBullets],
+      });
+    } else {
+      const firstEntry = cv.sections[targetIdx].entries[0];
+      const existingEntryBullets = Array.isArray(firstEntry.bullets) ? firstEntry.bullets : [];
+      const uniqueEntryAdditions = newBullets.filter((b) => !existingEntryBullets.includes(b));
+      firstEntry.bullets = [...uniqueEntryAdditions, ...existingEntryBullets];
+    }
+  }
 
   if (newBullets.length > 0) {
     const changeNote = isId

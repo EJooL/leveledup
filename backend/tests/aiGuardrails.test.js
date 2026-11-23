@@ -448,6 +448,139 @@ async function runGuardrailTests(assert) {
       merged.cv.contact.includes('[email@domain.com]'),
     'mergeWinsIntoCvObject deduplicates bullets and avoids fabricating hardcoded personal info'
   );
+  const mergedExpSec = merged.cv.sections.find((s) => s.type === 'experience');
+  assert(
+    mergedExpSec &&
+      Array.isArray(mergedExpSec.entries) &&
+      mergedExpSec.entries.length > 0 &&
+      mergedExpSec.entries[0].bullets.includes('Automated reporting pipeline, improving speed by [X]%.'),
+    'mergeWinsIntoCvObject syncs merged STAR bullets into structured experience entries for DOCX export'
+  );
+
+  // 10h. Reference CV structure parity: Education, Projects, Experience, Skills (skillGroups), Certifications
+  const RICH_REF_CV = `
+Ihza Budi Cendhika
+Aspiring Data Analyst | Python · SQL · Power BI
+ihzabudicendhika@gmail.com | linkedin.com/in/ihzabc | github.com/EJooL | Surabaya, East Java, Indonesia
+
+SUMMARY
+Information Systems student specializing in Data Analytics and Machine Learning.
+
+EDUCATION
+Universitas Negeri Surabaya 2024 – 2028 (Expected)
+- Information Systems (Knowledge Data Discovery) | GPA 3.84 / 4.00
+
+PROJECTS
+UK Online Retail Business Intelligence Jan – May 2026
+- Built an end-to-end BI pipeline on 779K clean records with 3 Power BI dashboards.
+
+EXPERIENCE
+Team Leader & GenAI Engineer — Asah led by Dicoding Aug 2026 – Present
+- Lead a 6-member team building a recommendation platform.
+
+SKILLS
+Analytics & BI: Python, Pandas, SQL, Power BI
+ML & Deployment: Scikit-learn, XGBoost, FastAPI, Docker
+
+CERTIFICATIONS
+- Fundamental Data Science — Coding Studio, 2025
+- Intermediate Data Analytics — Mekari University, 2025
+- Intro to Database and SQL — Great Learning, 2024
+- Fundamental SQL (SELECT) — DQLab, 2024
+`;
+  const refRewrite = generateFallbackRewrite(RICH_REF_CV);
+  const refTypes = refRewrite.cv.sections.map((s) => s.type);
+  assert(
+    refTypes.join(',') === 'education,projects,experience,skills,certifications',
+    `generateFallbackRewrite emits exact reference section order (Got: ${refTypes.join(',')})`
+  );
+  const eduSec = refRewrite.cv.sections[0];
+  const projSec = refRewrite.cv.sections[1];
+  const skillSec = refRewrite.cv.sections[3];
+  const certSec = refRewrite.cv.sections[4];
+  assert(
+    Array.isArray(eduSec.entries) &&
+      eduSec.entries[0].title.includes('Universitas Negeri Surabaya') &&
+      eduSec.entries[0].date.includes('2024'),
+    'Fallback rewrite extracts structured Education entry title and right-aligned date'
+  );
+  assert(
+    Array.isArray(projSec.entries) &&
+      projSec.entries[0].title.includes('UK Online Retail') &&
+      projSec.entries[0].date.includes('2026'),
+    'Fallback rewrite extracts structured Projects entry with date and bullets'
+  );
+  assert(
+    Array.isArray(skillSec.skillGroups) &&
+      skillSec.skillGroups.length === 2 &&
+      skillSec.skillGroups[0].category === 'Analytics & BI',
+    'Fallback rewrite preserves categorized skillGroups without bullets'
+  );
+  assert(
+    Array.isArray(certSec.bullets) && certSec.bullets.length === 4,
+    'Fallback rewrite preserves Certifications list for 2-column DOCX rendering'
+  );
+
+  // 10i. Structured live Gemini rewrite mock: verifies Zero-Hallucination inside entries[].bullets
+  const mockStructuredGemini = createMockAiClient(async () => ({
+    text: JSON.stringify({
+      cv: {
+        language: 'en',
+        name: 'Jane Doe',
+        title: 'Backend Engineer | Node.js · MySQL · REST API',
+        contact: ['jane.doe@example.com', 'Jakarta, Indonesia'],
+        summary: 'Backend Engineer building Node.js and MySQL web services.',
+        sections: [
+          {
+            heading: 'Education',
+            type: 'education',
+            entries: [
+              {
+                title: 'University of Indonesia',
+                date: '2018 – 2022',
+                subtitle: '',
+                bullets: ['B.S. in Computer Science'],
+              },
+            ],
+          },
+          {
+            heading: 'Experience',
+            type: 'experience',
+            entries: [
+              {
+                title: 'Backend Engineer — PT Tech Nusantara',
+                date: '2023 – Present',
+                subtitle: 'Jakarta · Hybrid',
+                bullets: [
+                  'Engineered REST APIs reducing response time by 75% across 9000 users.',
+                  'Maintained user authentication module and request logging.',
+                ],
+              },
+            ],
+          },
+          {
+            heading: 'Skills',
+            type: 'skills',
+            skillGroups: [{ category: 'Backend', items: 'Node.js, Express, MySQL, Git' }],
+          },
+        ],
+        changes: ['Formatted in modern ATS Word (.docx) reference layout.'],
+      },
+    }),
+  }));
+
+  const guardedStructured = await rewriteCv(CLEAN_EN_CV, { _aiClient: mockStructuredGemini });
+  const structuredExp = guardedStructured.cv.sections.find((s) => s.type === 'experience');
+  assert(
+    structuredExp &&
+      structuredExp.entries.length === 1 &&
+      !structuredExp.entries[0].bullets[0].includes('75%') &&
+      !structuredExp.entries[0].bullets[0].includes('9000') &&
+      hasBracketPlaceholder(structuredExp.entries[0].bullets[0]) &&
+      hasBracketPlaceholder(structuredExp.entries[0].bullets[1]) &&
+      structuredExp.bullets.length === 2,
+    'sanitizeRewriteResult enforces Zero-Hallucination inside structured entries[].bullets and synthesizes flat bullets'
+  );
 }
 
 module.exports = {

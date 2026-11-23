@@ -176,20 +176,139 @@ class AnalysisResult {
   }
 }
 
-class ImprovedCvSection {
-  final String heading;
+class ImprovedCvEntry {
+  final String title;
+  final String date;
+  final String subtitle;
   final List<String> bullets;
 
-  ImprovedCvSection({required this.heading, required this.bullets});
+  ImprovedCvEntry({
+    required this.title,
+    this.date = '',
+    this.subtitle = '',
+    this.bullets = const [],
+  });
 
-  factory ImprovedCvSection.fromJson(Map<String, dynamic> json) {
-    return ImprovedCvSection(
-      heading: json['heading']?.toString() ?? '',
+  factory ImprovedCvEntry.fromJson(Map<String, dynamic> json) {
+    return ImprovedCvEntry(
+      title: json['title']?.toString().trim() ?? '',
+      date: json['date']?.toString().trim() ?? '',
+      subtitle: json['subtitle']?.toString().trim() ?? '',
       bullets: List<String>.from(json['bullets'] ?? []),
     );
   }
 
-  Map<String, dynamic> toJson() => {'heading': heading, 'bullets': bullets};
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'date': date,
+        'subtitle': subtitle,
+        'bullets': bullets,
+      };
+}
+
+class ImprovedCvSkillGroup {
+  final String category;
+  final String items;
+
+  ImprovedCvSkillGroup({
+    required this.category,
+    required this.items,
+  });
+
+  factory ImprovedCvSkillGroup.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    final itemsStr = rawItems is List
+        ? rawItems.map((e) => e.toString().trim()).where((e) => e.isNotEmpty).join(', ')
+        : (rawItems?.toString().trim() ?? '');
+    return ImprovedCvSkillGroup(
+      category: json['category']?.toString().trim() ?? '',
+      items: itemsStr,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'category': category,
+        'items': items,
+      };
+}
+
+class ImprovedCvSection {
+  final String heading;
+  final String type;
+  final List<ImprovedCvEntry> entries;
+  final List<ImprovedCvSkillGroup> skillGroups;
+  final List<String> bullets;
+
+  ImprovedCvSection({
+    required this.heading,
+    this.type = 'generic',
+    this.entries = const [],
+    this.skillGroups = const [],
+    required this.bullets,
+  });
+
+  static String inferType(String? rawType, String heading) {
+    final explicit = (rawType ?? '').trim().toLowerCase();
+    const valid = {
+      'education',
+      'projects',
+      'experience',
+      'skills',
+      'certifications',
+      'generic',
+    };
+    if (valid.contains(explicit)) return explicit;
+
+    final h = heading.trim().toLowerCase();
+    if (RegExp(r'pendidikan|education|academic|akademik').hasMatch(h)) {
+      return 'education';
+    }
+    if (RegExp(r'proyek|project|portfolio|portofolio').hasMatch(h)) {
+      return 'projects';
+    }
+    if (RegExp(r'pengalaman|experience|work|kerja|magang|internship|organisasi|employment').hasMatch(h)) {
+      return 'experience';
+    }
+    if (RegExp(r'keahlian|kemampuan|keterampilan|skill|kompetensi|competenc|tools|tech').hasMatch(h)) {
+      return 'skills';
+    }
+    if (RegExp(r'sertifikasi|certif|lisensi|license|kursus|course|penghargaan|award|pelatihan|training').hasMatch(h)) {
+      return 'certifications';
+    }
+    return 'generic';
+  }
+
+  factory ImprovedCvSection.fromJson(Map<String, dynamic> json) {
+    final heading = json['heading']?.toString() ?? '';
+    final type = inferType(json['type']?.toString(), heading);
+    final entries = (json['entries'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(ImprovedCvEntry.fromJson)
+        .toList();
+    final skillGroups = (json['skillGroups'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(ImprovedCvSkillGroup.fromJson)
+        .toList();
+    final bullets = List<String>.from(json['bullets'] ?? []);
+
+    return ImprovedCvSection(
+      heading: heading,
+      type: type,
+      entries: entries,
+      skillGroups: skillGroups,
+      bullets: bullets,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'heading': heading,
+        'type': type,
+        if (entries.isNotEmpty)
+          'entries': entries.map((e) => e.toJson()).toList(),
+        if (skillGroups.isNotEmpty)
+          'skillGroups': skillGroups.map((g) => g.toJson()).toList(),
+        'bullets': bullets,
+      };
 }
 
 class ImprovedCV {
@@ -231,13 +350,32 @@ class ImprovedCV {
     final buffer = StringBuffer();
     buffer.writeln('# $name');
     buffer.writeln('**$title**');
-    buffer.writeln(contact.join(' • '));
-    buffer.writeln(isIndonesian ? '\n## Ringkasan Profesional' : '\n## Executive Summary');
+    buffer.writeln(contact.join(' | '));
+    buffer.writeln(isIndonesian ? '\n## RINGKASAN' : '\n## SUMMARY');
     buffer.writeln(summary);
     for (final section in sections) {
-      buffer.writeln('\n## ${section.heading}');
-      for (final b in section.bullets) {
-        buffer.writeln('- $b');
+      buffer.writeln('\n## ${section.heading.toUpperCase()}');
+      if (section.entries.isNotEmpty) {
+        for (final entry in section.entries) {
+          final header = entry.date.isNotEmpty
+              ? '**${entry.title}** (${entry.date})'
+              : '**${entry.title}**';
+          buffer.writeln(header);
+          if (entry.subtitle.isNotEmpty) {
+            buffer.writeln('_${entry.subtitle}_');
+          }
+          for (final b in entry.bullets) {
+            buffer.writeln('- $b');
+          }
+        }
+      } else if (section.skillGroups.isNotEmpty) {
+        for (final group in section.skillGroups) {
+          buffer.writeln('**${group.category}:** ${group.items}');
+        }
+      } else {
+        for (final b in section.bullets) {
+          buffer.writeln('- $b');
+        }
       }
     }
     return buffer.toString();

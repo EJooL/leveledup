@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/career_icons.dart';
-import '../../core/utils/pdf_generator.dart';
+import '../../core/utils/docx_generator.dart';
 import '../../models/career_companion_model.dart';
 import '../../models/cv_analysis_model.dart';
 import '../../providers/career_provider.dart';
@@ -119,7 +119,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Merged ${idsToMerge.length} STAR bullet(s) into your Living CV! Ready to export as PDF.',
+            'Merged ${idsToMerge.length} STAR bullet(s) into your Living CV! Ready to export as Word (.docx).',
           ),
           backgroundColor: AppColors.emerald,
         ),
@@ -129,16 +129,16 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
     }
   }
 
-  Future<void> _handleExportPdf(ImprovedCV cv) async {
+  Future<void> _handleExportDocx(ImprovedCV cv) async {
     try {
-      await PdfCvGenerator.exportAndDownloadPdf(cv);
+      await DocxCvGenerator.exportAndDownloadDocx(cv);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             cv.isIndonesian
-                ? 'PDF CV terbaru (${cv.name}) berhasil disimpan ke perangkat Anda!'
-                : 'Updated Living CV PDF (${cv.name}) saved to your device!',
+                ? 'Word CV (.docx) terbaru (${cv.name}) berhasil disimpan ke perangkat Anda!'
+                : 'Updated Living CV (.docx) (${cv.name}) saved to your device!',
           ),
           backgroundColor: AppColors.emerald,
         ),
@@ -147,7 +147,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to export PDF: $e'),
+          content: Text('Failed to export DOCX: $e'),
           backgroundColor: AppColors.crimson,
         ),
       );
@@ -665,7 +665,7 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                 ),
               ],
 
-              // 4. Living CV Preview & 1-Tap PDF Export Card
+              // 4. Living CV Preview & 1-Tap DOCX Export Card
               if (activeLivingCv != null) ...[
                 const SizedBox(height: 24),
                 Container(
@@ -691,8 +691,8 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                           Expanded(
                             child: Text(
                               activeLivingCv.isIndonesian
-                                  ? 'Dokumen CV Hidup Anda (Siap Unduh PDF)'
-                                  : 'Your Living CV (Updated & PDF-Ready)',
+                                  ? 'Dokumen CV Hidup Anda (Siap Unduh DOCX)'
+                                  : 'Your Living CV (Updated & DOCX-Ready)',
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
@@ -716,37 +716,49 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                           color: AppColors.border,
                           height: 24,
                         ),
-                        Text(
-                          activeLivingCv.sections.first.heading.toUpperCase(),
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.terracottaBright,
-                          ),
+                        Builder(
+                          builder: (context) {
+                            final previewSection =
+                                activeLivingCv.sections.firstWhere(
+                              (s) => s.type == 'experience',
+                              orElse: () => activeLivingCv.sections.first,
+                            );
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  previewSection.heading.toUpperCase(),
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.terracottaBright,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ...previewSection.bullets.take(4).map((b) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: PlaceholderRichText(
+                                      text: '• $b',
+                                      baseStyle: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.white,
+                                        height: 1.45,
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ],
+                            );
+                          },
                         ),
-                        const SizedBox(height: 8),
-                        ...activeLivingCv.sections.first.bullets
-                            .take(4)
-                            .map((b) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: PlaceholderRichText(
-                              text: '• $b',
-                              baseStyle: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.white,
-                                height: 1.45,
-                              ),
-                            ),
-                          );
-                        }),
                       ],
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
                         height: 48,
                         child: OutlinedButton.icon(
-                          onPressed: () => _handleExportPdf(activeLivingCv),
+                          onPressed: () => _handleExportDocx(activeLivingCv),
                           style: OutlinedButton.styleFrom(
                             backgroundColor:
                                 AppColors.emerald.withValues(alpha: 0.14),
@@ -767,8 +779,8 @@ class _WinsScreenState extends ConsumerState<WinsScreen> {
                           ),
                           label: Text(
                             activeLivingCv.isIndonesian
-                                ? 'Simpan PDF CV Terbaru (.pdf)'
-                                : 'Download Updated PDF CV (.pdf)',
+                                ? 'Simpan Word CV Terbaru (.docx)'
+                                : 'Download Updated Word CV (.docx)',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(

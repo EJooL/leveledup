@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/utils/pdf_generator.dart';
+import '../../core/utils/docx_generator.dart';
 import '../../providers/cv_provider.dart';
 import '../../widgets/issue_card.dart';
 import '../../widgets/leveledup_arrow.dart';
@@ -1274,20 +1274,41 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                     color: AppColors.white,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   cv.title,
                   style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
                     color: AppColors.terracottaBright,
                   ),
                 ),
-                const Divider(color: AppColors.border, height: 24),
+                if (cv.contact.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    cv.contact.join('  |  '),
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10.5,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+                const Divider(color: AppColors.border, height: 20),
+                Text(
+                  cv.isIndonesian ? 'RINGKASAN' : 'SUMMARY',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 6),
                 PlaceholderRichText(text: cv.summary),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 ...cv.sections.map(
                   (sec) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: 14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1300,13 +1321,93 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                             letterSpacing: 0.8,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        ...sec.bullets.map(
-                          (b) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: PlaceholderRichText(text: '• $b'),
+                        const Divider(color: AppColors.border, height: 10),
+                        if (sec.entries.isNotEmpty)
+                          ...sec.entries.map(
+                            (entry) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          entry.title,
+                                          style: const TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      if (entry.date.isNotEmpty) ...[
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          entry.date,
+                                          style: GoogleFonts.jetBrainsMono(
+                                            fontSize: 10.5,
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  if (entry.subtitle.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      entry.subtitle,
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                  if (entry.bullets.isNotEmpty)
+                                    const SizedBox(height: 4),
+                                  ...entry.bullets.map(
+                                    (b) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 5),
+                                      child: PlaceholderRichText(text: '• $b'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else if (sec.skillGroups.isNotEmpty)
+                          ...sec.skillGroups.map(
+                            (group) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Text.rich(
+                                TextSpan(
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    color: AppColors.white,
+                                    height: 1.4,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: '${group.category}: ',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    TextSpan(text: group.items),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          ...sec.bullets.map(
+                            (b) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: PlaceholderRichText(text: '• $b'),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -1323,33 +1424,35 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen>
                 ElevatedButton.icon(
                   onPressed: () async {
                     final savedPath =
-                        await PdfCvGenerator.exportAndDownloadPdf(cv);
+                        await DocxCvGenerator.exportAndDownloadDocx(cv);
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('PDF CV saved locally to $savedPath!'),
+                        content:
+                            Text('Word CV (.docx) saved locally to $savedPath!'),
                         backgroundColor: AppColors.emerald,
                       ),
                     );
                   },
                   icon: const Icon(Icons.download_rounded, size: 16),
-                  label: const Text('Download PDF CV (.pdf)'),
+                  label: const Text('Download Word CV (.docx)'),
                 )
               else
                 OutlinedButton.icon(
                   onPressed: () async {
                     final savedPath =
-                        await PdfCvGenerator.exportAndDownloadPdf(cv);
+                        await DocxCvGenerator.exportAndDownloadDocx(cv);
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('PDF CV saved locally to $savedPath!'),
+                        content:
+                            Text('Word CV (.docx) saved locally to $savedPath!'),
                         backgroundColor: AppColors.emerald,
                       ),
                     );
                   },
                   icon: const Icon(Icons.download_rounded, size: 16),
-                  label: const Text('Download PDF CV (.pdf)'),
+                  label: const Text('Download Word CV (.docx)'),
                 ),
               OutlinedButton.icon(
                 onPressed: () {

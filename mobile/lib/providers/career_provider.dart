@@ -115,7 +115,7 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
           id: 'q_self_applications',
           title: 'Send 5 tailored job applications',
           description:
-              'Apply to 5 target roles using your newly exported ATS-ready PDF CV.',
+              'Apply to 5 target roles using your newly exported ATS-ready Word (.docx) CV.',
           stage: CareerStage.jobHunting,
           difficulty: QuestDifficulty.medium,
           xpReward: 75,
@@ -789,7 +789,7 @@ class CareerNotifier extends StateNotifier<UserCareerProfile> {
         id: 'b_living_cv',
         title: 'Living CV Updated!',
         description:
-            'Merged ${winsToUse.length} STAR bullet(s) into your CV — ready for PDF download.',
+            'Merged ${winsToUse.length} STAR bullet(s) into your CV — ready for Word (.docx) download.',
         iconCode: 'auto_awesome',
         isEarned: true,
       ),

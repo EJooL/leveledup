@@ -2,13 +2,14 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
 
-Future<String> savePdfFileLocally(Uint8List bytes, String fileName) async {
+Future<String> saveDocxFileLocally(Uint8List bytes, String fileName) async {
   // On Windows/macOS/Linux laptop, save directly into the user's Downloads folder
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     final userProfile =
         Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
     if (userProfile != null && userProfile.isNotEmpty) {
-      final downloadsDir = Directory('$userProfile${Platform.pathSeparator}Downloads');
+      final downloadsDir =
+          Directory('$userProfile${Platform.pathSeparator}Downloads');
       if (await downloadsDir.exists()) {
         final filePath =
             '${downloadsDir.path}${Platform.pathSeparator}$fileName';
@@ -27,4 +28,3 @@ Future<String> savePdfFileLocally(Uint8List bytes, String fileName) async {
   await file.writeAsBytes(bytes, flush: true);
   return filePath;
 }
-

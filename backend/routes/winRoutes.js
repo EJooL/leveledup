@@ -214,7 +214,7 @@ router.post('/', async (req, res, next) => {
 /**
  * POST /api/wins/merge-cv
  * Merges selected Brag Doc wins into the user's latest rewritten CV ("Add to my CV")
- * so they can immediately export an updated PDF CV.
+ * so they can immediately export an updated Word (.docx) CV.
  */
 router.post('/merge-cv', async (req, res, next) => {
   try {
@@ -374,11 +374,29 @@ router.post('/merge-cv', async (req, res, next) => {
                 : `Results-driven ${scanRows[0].job_title || 'Professional'} with a track record of quantified achievements.`,
               sections: [
                 {
-                  heading: isId ? 'Pengalaman Profesional' : 'Professional Experience',
+                  heading: isId ? 'Pengalaman' : 'Experience',
+                  type: 'experience',
+                  entries: [
+                    {
+                      title: isId ? 'Pengalaman & Pencapaian Terbaru' : 'Recent Experience & Achievements',
+                      date: isId ? 'Sekarang' : 'Present',
+                      subtitle: '',
+                      bullets: [],
+                    },
+                  ],
                   bullets: [],
                 },
                 {
-                  heading: isId ? 'Keahlian & Kompetensi' : 'Skills & Competencies',
+                  heading: isId ? 'Keahlian' : 'Skills',
+                  type: 'skills',
+                  skillGroups: [
+                    {
+                      category: isId ? 'Keahlian Utama' : 'Core Skills',
+                      items: matched.length > 0
+                        ? matched.join(', ')
+                        : (isId ? 'Manajemen Proyek, Analisis Data, Kolaborasi Tim' : 'Project Execution, Data Analysis, Team Collaboration'),
+                    },
+                  ],
                   bullets: matched.length > 0
                     ? [matched.join(', ')]
                     : [isId ? 'Manajemen Proyek, Analisis Data, Kolaborasi Tim' : 'Project Execution, Data Analysis, Team Collaboration'],

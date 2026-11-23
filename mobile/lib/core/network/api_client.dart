@@ -582,6 +582,25 @@ class ApiClient {
         .map(
           (s) => ImprovedCvSection(
             heading: s.heading,
+            type: s.type,
+            entries: s.entries
+                .map(
+                  (e) => ImprovedCvEntry(
+                    title: e.title,
+                    date: e.date,
+                    subtitle: e.subtitle,
+                    bullets: List<String>.from(e.bullets),
+                  ),
+                )
+                .toList(),
+            skillGroups: s.skillGroups
+                .map(
+                  (g) => ImprovedCvSkillGroup(
+                    category: g.category,
+                    items: g.items,
+                  ),
+                )
+                .toList(),
             bullets: List<String>.from(s.bullets),
           ),
         )
@@ -590,21 +609,39 @@ class ApiClient {
     if (sections.isEmpty) {
       sections.add(
         ImprovedCvSection(
-          heading: isId ? 'Pengalaman Profesional' : 'Professional Experience',
+          heading: isId ? 'Pengalaman' : 'Experience',
+          type: 'experience',
+          entries: [
+            ImprovedCvEntry(
+              title: isId
+                  ? 'Pengalaman & Pencapaian Terbaru'
+                  : 'Recent Experience & Achievements',
+              date: isId ? 'Sekarang' : 'Present',
+              bullets: const [],
+            ),
+          ],
           bullets: [],
         ),
       );
     }
 
     final expIdx = sections.indexWhere(
-      (s) => RegExp(
-        r'pengalaman|experience|proyek|project|work|kerja',
-        caseSensitive: false,
-      ).hasMatch(s.heading),
+      (s) =>
+          s.type == 'experience' ||
+          RegExp(
+            r'pengalaman|experience|work|kerja',
+            caseSensitive: false,
+          ).hasMatch(s.heading),
     );
-    final targetIdx = expIdx != -1 ? expIdx : 0;
+    final projIdx = sections.indexWhere(
+      (s) =>
+          s.type == 'projects' ||
+          RegExp(r'proyek|project', caseSensitive: false).hasMatch(s.heading),
+    );
+    final targetIdx = expIdx != -1 ? expIdx : (projIdx != -1 ? projIdx : 0);
 
-    final existing = sections[targetIdx].bullets;
+    final targetSection = sections[targetIdx];
+    final existing = targetSection.bullets;
     final added = <String>[];
     for (final w in winsToMerge) {
       final b = w.toStarBullet().trim();
@@ -613,8 +650,24 @@ class ApiClient {
       }
     }
 
+    final updatedEntries = List<ImprovedCvEntry>.from(targetSection.entries);
+    if (added.isNotEmpty && updatedEntries.isNotEmpty) {
+      final first = updatedEntries.first;
+      final uniqueForEntry =
+          added.where((b) => !first.bullets.contains(b)).toList();
+      updatedEntries[0] = ImprovedCvEntry(
+        title: first.title,
+        date: first.date,
+        subtitle: first.subtitle,
+        bullets: [...uniqueForEntry, ...first.bullets],
+      );
+    }
+
     sections[targetIdx] = ImprovedCvSection(
-      heading: sections[targetIdx].heading,
+      heading: targetSection.heading,
+      type: targetSection.type,
+      entries: updatedEntries,
+      skillGroups: targetSection.skillGroups,
       bullets: [...added, ...existing],
     );
 
@@ -1020,19 +1073,48 @@ class ApiClient {
       return ImprovedCV(
         language: 'id',
         name: 'Budi Santoso',
-        title: 'Full-Stack & Mobile Software Engineer',
+        title: 'Software Engineer | Node.js · Flutter · MySQL · REST API · Docker',
         contact: [
           'budi.santoso@example.com',
-          '+62 812 3456 7890',
-          'Jakarta, Indonesia',
           'linkedin.com/in/budisantoso',
           'github.com/budisantoso',
+          'Jakarta, Indonesia',
         ],
         summary:
             'Software Engineer berorientasi hasil dengan spesialisasi pengembangan layanan mikro backend Node.js dan aplikasi lintas platform Flutter. Terbukti mampu merancang arsitektur API yang bersih, mengoptimalkan performa database relasional, dan mempercepat siklus rilis fitur.',
         sections: [
           ImprovedCvSection(
-            heading: 'Pengalaman Profesional',
+            heading: 'Pendidikan',
+            type: 'education',
+            entries: [
+              ImprovedCvEntry(
+                title: 'Universitas Indonesia',
+                date: '2019 – 2023',
+                bullets: [
+                  'S1 Teknik Informatika | IPK [X.XX] / 4.00',
+                ],
+              ),
+            ],
+            bullets: [
+              'S1 Teknik Informatika | IPK [X.XX] / 4.00',
+            ],
+          ),
+          ImprovedCvSection(
+            heading: 'Pengalaman',
+            type: 'experience',
+            entries: [
+              ImprovedCvEntry(
+                title: 'Software Engineer — PT Solusi Teknologi Indonesia',
+                date: 'Jan 2023 – Sekarang',
+                subtitle: 'Backend & Mobile Engineering · Jakarta',
+                bullets: [
+                  'Merancang dan memelihara layanan backend RESTful menggunakan Node.js dan Express, meningkatkan kecepatan respons API sebesar [X]% pada [jumlah] endpoint utama.',
+                  'Mengoptimalkan skema dan strategi indexing database MySQL, menurunkan latensi eksekusi query dari [ms awal] menjadi [ms akhir].',
+                  'Mengembangkan alur autentikasi dan integrasi payment gateway yang aman, mendukung lebih dari [jumlah] transaksi bulanan dengan tingkat uptime [X]%.',
+                  'Berkolaborasi dengan tim lintas fungsi dalam membangun modul aplikasi Flutter yang responsif, memangkas waktu pengiriman fitur sebesar [X]%.',
+                ],
+              ),
+            ],
             bullets: [
               'Merancang dan memelihara layanan backend RESTful menggunakan Node.js dan Express, meningkatkan kecepatan respons API sebesar [X]% pada [jumlah] endpoint utama.',
               'Mengoptimalkan skema dan strategi indexing database MySQL, menurunkan latensi eksekusi query dari [ms awal] menjadi [ms akhir].',
@@ -1041,13 +1123,18 @@ class ApiClient {
             ],
           ),
           ImprovedCvSection(
-            heading: 'Pendidikan',
-            bullets: [
-              'S1 Teknik Informatika — Universitas Indonesia (2019 – 2023) | IPK: [X.XX]/4.00',
+            heading: 'Keahlian',
+            type: 'skills',
+            skillGroups: [
+              ImprovedCvSkillGroup(
+                category: 'Bahasa & Framework',
+                items: 'Dart, Flutter, JavaScript (ES6+), Node.js, Express.js, SQL',
+              ),
+              ImprovedCvSkillGroup(
+                category: 'Database & Perangkat',
+                items: 'MySQL, RESTful API, Git, Docker, Postman, Agile/Scrum',
+              ),
             ],
-          ),
-          ImprovedCvSection(
-            heading: 'Keahlian Teknis',
             bullets: [
               'Bahasa & Framework: Dart, Flutter, JavaScript (ES6+), Node.js, Express.js, SQL',
               'Database & Perangkat: MySQL, RESTful API, Git, Docker, Postman, Agile/Scrum',
@@ -1055,7 +1142,7 @@ class ApiClient {
           ),
         ],
         changes: [
-          'Menyusun ulang struktur CV menjadi satu kolom bersih yang ramah parser ATS.',
+          'Menyusun ulang struktur CV mengikuti format referensi ATS modern siap unduh sebagai Word (.docx).',
           'Mengonversi kalimat tugas pasif menjadi poin pencapaian aktif berpola STAR dalam Bahasa Indonesia.',
           'Menambahkan penanda [placeholder] pada metrik angka yang perlu Anda lengkapi dengan data riil proyek Anda (Kebijakan Anti-Fabrikasi).',
         ],
@@ -1065,19 +1152,48 @@ class ApiClient {
     return ImprovedCV(
       language: 'en',
       name: 'Budi Santoso',
-      title: 'Full-Stack & Mobile Software Engineer',
+      title: 'Software Engineer | Node.js · Flutter · MySQL · REST API · Docker',
       contact: [
         'budi.santoso@example.com',
-        '+62 812 3456 7890',
-        'Jakarta, Indonesia (Open to Global Remote)',
         'linkedin.com/in/budisantoso',
         'github.com/budisantoso',
+        'Jakarta, Indonesia',
       ],
       summary:
           'Results-oriented Software Engineer specializing in Node.js backend microservices and cross-platform Flutter applications. Proven ability to architect clean APIs, optimize relational databases, and deliver scalable mobile experiences.',
       sections: [
         ImprovedCvSection(
-          heading: 'Professional Experience',
+          heading: 'Education',
+          type: 'education',
+          entries: [
+            ImprovedCvEntry(
+              title: 'Universitas Indonesia',
+              date: '2019 – 2023',
+              bullets: [
+                'B.S. in Computer Science | GPA [X.XX] / 4.00',
+              ],
+            ),
+          ],
+          bullets: [
+            'B.S. in Computer Science | GPA [X.XX] / 4.00',
+          ],
+        ),
+        ImprovedCvSection(
+          heading: 'Experience',
+          type: 'experience',
+          entries: [
+            ImprovedCvEntry(
+              title: 'Software Engineer — PT Solusi Teknologi Indonesia',
+              date: 'Jan 2023 – Present',
+              subtitle: 'Backend & Mobile Engineering · Jakarta',
+              bullets: [
+                'Architected and maintained RESTful backend services using Node.js and Express, improving API response times by [X]% across [number] endpoints.',
+                'Optimized MySQL database schemas and indexing strategies, reducing query execution latency from [initial ms] to [target ms].',
+                'Engineered secure payment gateway and authentication workflows, supporting over [number] monthly transactions with [X]% uptime.',
+                'Collaborated with cross-functional mobile teams to build responsive Flutter UI modules, cutting feature delivery time by [X]%.',
+              ],
+            ),
+          ],
           bullets: [
             'Architected and maintained RESTful backend services using Node.js and Express, improving API response times by [X]% across [number] endpoints.',
             'Optimized MySQL database schemas and indexing strategies, reducing query execution latency from [initial ms] to [target ms].',
@@ -1086,13 +1202,18 @@ class ApiClient {
           ],
         ),
         ImprovedCvSection(
-          heading: 'Education',
-          bullets: [
-            'B.S. in Computer Science — Universitas Indonesia (2019 – 2023) | GPA: [X.XX]/4.00',
+          heading: 'Skills',
+          type: 'skills',
+          skillGroups: [
+            ImprovedCvSkillGroup(
+              category: 'Languages & Frameworks',
+              items: 'Dart, Flutter, JavaScript (ES6+), Node.js, Express.js, SQL',
+            ),
+            ImprovedCvSkillGroup(
+              category: 'Databases & DevOps',
+              items: 'MySQL, RESTful APIs, Git, Docker, Postman, Agile/Scrum',
+            ),
           ],
-        ),
-        ImprovedCvSection(
-          heading: 'Technical Skills',
           bullets: [
             'Languages & Frameworks: Dart, Flutter, JavaScript (ES6+), Node.js, Express.js, SQL',
             'Databases & DevOps: MySQL, RESTful APIs, Git, Docker, Postman, Agile/Scrum',
@@ -1100,7 +1221,7 @@ class ApiClient {
         ),
       ],
       changes: [
-        'Structured resume into a clean single-column layout compliant with global ATS parsers.',
+        'Structured resume into the modern ATS reference layout ready for direct Word (.docx) export.',
         'Transformed passive duty statements into high-impact English STAR achievement bullets.',
         'Inserted bracketed [placeholder] markers for metrics you must fill with your real project numbers (Zero-Hallucination Policy).',
       ],

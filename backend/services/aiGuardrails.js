@@ -704,8 +704,40 @@ function sanitizeAnalysisResult(
 }
 
 /**
+ * Infer canonical CV section type from explicit type or heading text.
+ * Matches the reference CV layout: education, projects, experience, skills, certifications, generic.
+ */
+function inferCvSectionType(rawType, heading = '') {
+  const explicit = String(rawType || '').trim().toLowerCase();
+  const validTypes = new Set([
+    'education',
+    'projects',
+    'experience',
+    'skills',
+    'certifications',
+    'generic',
+  ]);
+  if (validTypes.has(explicit)) return explicit;
+
+  const h = String(heading || '').trim().toLowerCase();
+  if (/pendidikan|education|academic|akademik/.test(h)) return 'education';
+  if (/proyek|project|portfolio|portofolio/.test(h)) return 'projects';
+  if (/pengalaman|experience|work|kerja|magang|internship|organisasi|employment/.test(h)) {
+    return 'experience';
+  }
+  if (/keahlian|kemampuan|keterampilan|skill|kompetensi|competenc|tools|tech/.test(h)) {
+    return 'skills';
+  }
+  if (/sertifikasi|certif|lisensi|license|kursus|course|penghargaan|award|pelatihan|training/.test(h)) {
+    return 'certifications';
+  }
+  return 'generic';
+}
+
+/**
  * Sanitize and enforce schema compliance, bias stripping, and Zero-Hallucination
  * placeholder parity on CV Rewrite output (both live Gemini and fallback).
+ * Supports both structured reference sections (`entries`, `skillGroups`) and legacy `bullets`.
  */
 function sanitizeRewriteResult(raw, { sourceText = '', lang = 'en', engine = 'gemini' }) {
   const normalizedLang = normalizeLanguage(lang, sourceText);
@@ -745,13 +777,81 @@ function sanitizeRewriteResult(raw, { sourceText = '', lang = 'en', engine = 'ge
         typeof sec.heading === 'string' && sec.heading.trim()
           ? sec.heading.trim()
           : (idx === 0
-              ? (isId ? 'Pengalaman Profesional' : 'Professional Experience')
+              ? (isId ? 'Pengalaman' : 'Experience')
               : (isId ? `Bagian ${idx + 1}` : `Section ${idx + 1}`));
 
-      const isExperienceSection = /pengalaman|experience|proyek|project|work|kerja|magang|internship|organisasi/i.test(
-        heading
-      );
+      const type = inferCvSectionType(sec.type, heading);
+      const isExperienceLike = type === 'experience' || type === 'projects';
 
+      // 1. Sanitize structured entries (Education, Projects, Experience)
+      const sanitizedEntries = [];
+      if (Array.isArray(sec.entries)) {
+        for (const entry of sec.entries) {
+          if (!entry || typeof entry !== 'object') continue;
+          const rawTitle = typeof entry.title === 'string' ? entry.title.trim() : '';
+          if (!rawTitle || isBiasLine(rawTitle)) continue;
+
+          const cleanTitle = sanitizeFabricatedMetrics(rawTitle, sourceText, normalizedLang);
+          const cleanDate =
+            typeof entry.date === 'string'
+              ? entry.date.trim()
+              : '';
+          const rawSubtitle =
+            typeof entry.subtitle === 'string' ? entry.subtitle.trim() : '';
+          const cleanSubtitle =
+            rawSubtitle && !isBiasLine(rawSubtitle)
+              ? sanitizeFabricatedMetrics(rawSubtitle, sourceText, normalizedLang)
+              : '';
+
+          const entryBullets = [];
+          if (Array.isArray(entry.bullets)) {
+            for (const b of entry.bullets) {
+              if (typeof b !== 'string') continue;
+              const trimmed = b.trim();
+              if (!trimmed || isBiasLine(trimmed)) continue;
+              if (isExperienceLike) {
+                const guarded = ensureMetricOrPlaceholder(trimmed, sourceText, normalizedLang, {
+                  skipAppendIfHeader: true,
+                });
+                if (guarded) entryBullets.push(guarded);
+              } else {
+                const cleaned = sanitizeFabricatedMetrics(trimmed, sourceText, normalizedLang);
+                if (cleaned) entryBullets.push(cleaned);
+              }
+            }
+          }
+
+          if (cleanTitle || entryBullets.length > 0) {
+            sanitizedEntries.push({
+              title: cleanTitle,
+              date: cleanDate,
+              subtitle: cleanSubtitle,
+              bullets: entryBullets,
+            });
+          }
+        }
+      }
+
+      // 2. Sanitize structured skillGroups (Skills)
+      const sanitizedSkillGroups = [];
+      if (Array.isArray(sec.skillGroups)) {
+        for (const group of sec.skillGroups) {
+          if (!group || typeof group !== 'object') continue;
+          const cat = typeof group.category === 'string' ? group.category.trim() : '';
+          const items = typeof group.items === 'string'
+            ? group.items.trim()
+            : Array.isArray(group.items)
+              ? group.items.map((x) => String(x || '').trim()).filter(Boolean).join(', ')
+              : '';
+          if (!items || isBiasLine(cat) || isBiasLine(items)) continue;
+          sanitizedSkillGroups.push({
+            category: cat || (isId ? 'Keahlian Utama' : 'Core Skills'),
+            items: sanitizeFabricatedMetrics(items, sourceText, normalizedLang),
+          });
+        }
+      }
+
+      // 3. Sanitize flat bullets (always populated for backwards compatibility)
       const rawBullets = Array.isArray(sec.bullets) ? sec.bullets : [];
       const sanitizedBullets = [];
 
@@ -760,7 +860,7 @@ function sanitizeRewriteResult(raw, { sourceText = '', lang = 'en', engine = 'ge
         const trimmed = b.trim();
         if (!trimmed || isBiasLine(trimmed)) continue;
 
-        if (isExperienceSection) {
+        if (isExperienceLike) {
           const guarded = ensureMetricOrPlaceholder(trimmed, sourceText, normalizedLang, {
             skipAppendIfHeader: true,
           });
@@ -770,22 +870,61 @@ function sanitizeRewriteResult(raw, { sourceText = '', lang = 'en', engine = 'ge
         }
       }
 
-      return { heading, bullets: sanitizedBullets };
+      // Synthesize flat bullets from structured entries/skillGroups when bullets wasn't explicitly supplied
+      if (sanitizedBullets.length === 0) {
+        if (sanitizedEntries.length > 0) {
+          for (const e of sanitizedEntries) {
+            if (e.bullets.length > 0) {
+              for (const b of e.bullets) {
+                sanitizedBullets.push(b);
+              }
+            } else if (e.title) {
+              sanitizedBullets.push(e.date ? `${e.title} (${e.date})` : e.title);
+            }
+          }
+        } else if (sanitizedSkillGroups.length > 0) {
+          for (const g of sanitizedSkillGroups) {
+            sanitizedBullets.push(`${g.category}: ${g.items}`);
+          }
+        }
+      }
+
+      const resultSec = { heading, type, bullets: sanitizedBullets };
+      if (sanitizedEntries.length > 0) {
+        resultSec.entries = sanitizedEntries;
+      }
+      if (sanitizedSkillGroups.length > 0) {
+        resultSec.skillGroups = sanitizedSkillGroups;
+      }
+      return resultSec;
     })
-    .filter((sec) => sec.bullets.length > 0);
+    .filter(
+      (sec) =>
+        sec.bullets.length > 0 ||
+        (Array.isArray(sec.entries) && sec.entries.length > 0) ||
+        (Array.isArray(sec.skillGroups) && sec.skillGroups.length > 0)
+    );
 
   if (sections.length === 0) {
     throw new Error('Invalid CV rewrite schema: all sections empty after sanitization');
   }
 
   // Guarantee Zero-Hallucination placeholder parity: if original CV had no metrics,
-  // ensure the rewritten experience section has explicit [placeholder] tags
+  // ensure the rewritten experience/projects section has explicit [placeholder] tags
   const sectionsJoined = JSON.stringify(sections);
   if (!sourceHasMetrics && !hasBracketPlaceholder(sectionsJoined)) {
-    const expSec = sections.find((s) =>
-      /pengalaman|experience|proyek|project|work|kerja/i.test(s.heading)
-    ) || sections[0];
-    if (expSec.bullets.length > 0) {
+    const expSec = sections.find((s) => s.type === 'experience' || s.type === 'projects') || sections[0];
+    if (Array.isArray(expSec.entries) && expSec.entries.length > 0 && expSec.entries[0].bullets.length > 0) {
+      expSec.entries[0].bullets[0] = ensureMetricOrPlaceholder(
+        expSec.entries[0].bullets[0],
+        sourceText,
+        normalizedLang,
+        { skipAppendIfHeader: false }
+      );
+      if (expSec.bullets.length > 0) {
+        expSec.bullets[0] = expSec.entries[0].bullets[0];
+      }
+    } else if (expSec.bullets.length > 0) {
       const targetIdx = expSec.bullets.findIndex((b) => !isHeaderLikeBullet(b));
       const idxToPatch = targetIdx !== -1 ? targetIdx : expSec.bullets.length - 1;
       expSec.bullets[idxToPatch] = ensureMetricOrPlaceholder(
@@ -889,6 +1028,7 @@ module.exports = {
   normalizeCvTextForHash,
   computeCvContentHash,
   calculateAtsScore,
+  inferCvSectionType,
   sanitizeAnalysisResult,
   sanitizeRewriteResult,
   sanitizeWinBulletResult,
